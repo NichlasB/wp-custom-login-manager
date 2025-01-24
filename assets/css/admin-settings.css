@@ -1,0 +1,102 @@
+/* Settings page layout */
+.wpclm-logo-preview,
+.wpclm-background-preview {
+    margin: 10px 0;
+    padding: 10px;
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    display: inline-block;
+}
+
+.wpclm-logo-preview img,
+.wpclm-background-preview img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+}
+
+/* Email preview dialog */
+.email-preview-content {
+    padding: 20px;
+    background: #fff;
+    overflow-y: auto;
+    max-height: 500px;
+}
+
+/* Color picker */
+.wp-picker-container {
+    display: inline-block;
+}
+
+/* Help tips */
+.wpclm-help-tip {
+    color: #666;
+    margin-left: 5px;
+    cursor: help;
+}
+
+/* Form spacing */
+.form-table th {
+    padding-top: 20px;
+}
+
+.form-table td {
+    padding-top: 15px;
+}
+
+/* Description text */
+.description {
+    margin-top: 5px;
+    color: #666;
+}
+
+/* Debug Log Viewer */
+.wpclm-log-viewer {
+    display: none;
+}
+
+.wpclm-log-viewer .log-contents {
+    background: #f5f5f5;
+    padding: 15px;
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+    overflow: auto;
+}
+
+.wpclm-log-viewer .log-contents pre {
+    margin: 0;
+    white-space: pre-wrap;
+    font-family: monospace;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.wpclm-log-viewer .log-controls {
+    text-align: right;
+}
+
+.wpclm-log-viewer .log-controls button {
+    margin-left: 10px;
+}
+
+/* Debug Info */
+.wpclm-debug-info {
+    background: #fff;
+    padding: 15px;
+    margin: 20px 0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.wpclm-debug-info pre {
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+.wpclm-debug-actions {
+    margin-top: 10px;
+}
+
+.wpclm-debug-actions button {
+    margin-right: 10px;
+}

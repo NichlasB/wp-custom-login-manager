@@ -1,0 +1,594 @@
+/* ==========================================
+   Part 1: Reset and Base Layout Styles 
+   ========================================== */
+
+/* Template Page Reset */
+body.wpclm-template-page {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    background-color: #f5f5f5;
+}
+
+body.wpclm-template-page #wpadminbar,
+body.wpclm-template-page header,
+body.wpclm-template-page footer,
+body.wpclm-template-page .site-header,
+body.wpclm-template-page .site-footer,
+body.wpclm-template-page .entry-header,
+body.wpclm-template-page .entry-footer,
+body.wpclm-template-page #masthead,
+body.wpclm-template-page #colophon,
+body.wpclm-template-page .navigation,
+body.wpclm-template-page .sidebar {
+    display: none !important;
+}
+
+/* Admin Bar Fix */
+body.admin-bar.wpclm-template-page {
+    min-height: calc(100vh - 32px);
+}
+
+@media screen and (max-width: 782px) {
+    body.admin-bar.wpclm-template-page {
+        min-height: calc(100vh - 46px);
+    }
+}
+
+/* Main Container */
+.wpclm-container {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f5f5f5;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    max-width: none;
+}
+
+body.wpclm-template-page .wpclm-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+/* Form Container */
+.wpclm-form-container {
+    width: 100%;
+    padding: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+}
+
+body.wpclm-template-page .wpclm-form-container {
+    margin-left: 40%;
+    width: 60%;
+    min-height: 100vh;
+}
+
+/* Background Section */
+.wpclm-background {
+    display: none;
+    background-color: #f0f2f5;
+}
+
+body.wpclm-template-page .wpclm-background {
+    display: block;
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 40%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.wpclm-background-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* Form Wrapper */
+.wpclm-form-wrapper {
+    width: 100%;
+    max-width: 550px;
+    background: #ffffff;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* ==========================================
+   Part 2: Form Elements and Components
+   ========================================== */
+
+/* Logo */
+.wpclm-logo {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.wpclm-logo img {
+    max-width: 200px;
+    height: auto;
+}
+
+/* Welcome Message */
+.wpclm-welcome-message {
+    background: #fffce2;
+    border-radius: 6px;
+    color: #4a5568;
+    font-size: 1rem;
+    margin-bottom: 2rem;
+    padding: 5px 10px;
+}
+
+.wpclm-form.password-setup-form h2 {
+    color: #444;
+    font-size: 1.2rem;
+}
+
+/* Form Base */
+.wpclm-form {
+    margin-top: 1.5rem;
+    padding: 0;
+    width: 100%;
+}
+
+/* Form Fields and Layout */
+.form-field {
+    margin-bottom: 1.5rem;
+    width: 100%;
+}
+
+.form-row {
+    display: flex;
+    flex-direction: row;
+    margin: 0 0 1.5rem 0;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0;
+}
+
+.form-row .form-field {
+    flex: 1;
+    margin: 0;
+    min-width: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.form-row .form-field:first-child {
+    margin-right: 1rem;
+}
+
+/* Labels */
+.form-field label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #4a5568;
+    font-size: 0.95rem;
+}
+
+/* Input Fields */
+.form-field input[type="text"],
+.form-field input[type="email"],
+.form-field input[type="password"] {
+    width: 100%;
+    padding: 0.875rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    transition: all 0.2s ease;
+    background-color: #f8fafc;
+    color: #1a202c;
+    box-sizing: border-box;
+    display: block;
+    margin: 0;
+}
+
+.form-field input[type="text"]:focus,
+.form-field input[type="email"]:focus,
+.form-field input[type="password"]:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background-color: #ffffff;
+}
+
+.form-field input::placeholder {
+    color: #a0aec0;
+}
+
+/* ==========================================
+   Password Field Toggle Button
+   ========================================== */
+
+/* Container for password input and toggle button */
+.password-field-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+/* Password toggle button styling */
+.password-toggle {
+    position: absolute;
+    right: 10px;
+    background: none;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    color: #4a5568; /* Matches the form label color */
+    transition: color 0.2s ease;
+}
+
+/* Hover state for toggle button */
+.password-toggle:hover {
+    color: #2d3748;
+}
+
+/* Icon styling within toggle button */
+.password-toggle .dashicons {
+    width: 20px;
+    height: 20px;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Ensure password input accommodates the toggle button */
+.password-field-wrapper input[type="password"],
+.password-field-wrapper input[type="text"] {
+    padding-right: 40px;
+}
+
+/* Checkbox Styles */
+.remember-me {
+    display: flex;
+    align-items: center;
+}
+
+.remember-me input[type="checkbox"] {
+    margin-right: 0.5rem;
+}
+
+/* Button Styles */
+.wpclm-button {
+    width: 100%;
+    padding: 0.875rem !important;
+    background-color: #0073aa;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px !important;
+    font-size: 1rem !important;
+    font-weight: 500 !important;
+    cursor: pointer;
+    transition: all 0.2s ease !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+    margin: 1rem 0;
+}
+
+.wpclm-button:hover {
+    background-color: #005177;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+}
+
+.wpclm-button-icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.wpclm-button-icon path {
+    fill: currentColor;
+}
+
+/* Link Styles */
+.form-links {
+    margin-top: 1.5rem;
+    text-align: center;
+}
+
+.form-links a {
+    color: #0073aa;
+    text-decoration: none;
+    margin: 0 0.5rem;
+}
+
+.form-links a:hover {
+    text-decoration: underline;
+}
+
+/* Messages */
+.wpclm-error-message,
+.wpclm-success-message {
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.wpclm-error-message {
+    background-color: #fff2f2;
+    color: #d63638;
+    border: 1px solid #ffcece;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.wpclm-success-message {
+    background-color: #f0f8f0;
+    color: #00a32a;
+    border: 1px solid #c3e6cb;
+}
+
+/* Error States */
+.form-field input.error {
+    border-color: #e53e3e;
+    background-color: #fff5f5;
+}
+
+.form-field .error-message {
+    color: #e53e3e;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+/* ==========================================
+   Part 3: Additional Components & Utilities
+   ========================================== */
+
+/* Password Strength Meter */
+.password-strength-meter {
+    height: 4px;
+    background-color: #eee;
+    margin-top: 0.5rem;
+    border-radius: 2px;
+}
+
+.password-strength-meter::before {
+    content: '';
+    display: block;
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+.password-strength-meter.very-weak::before {
+    width: 20%;
+    background-color: #d63638;
+}
+
+.password-strength-meter.weak::before {
+    width: 40%;
+    background-color: #ffb900;
+}
+
+.password-strength-meter.medium::before {
+    width: 60%;
+    background-color: #00a32a;
+}
+
+.password-strength-meter.strong::before {
+    width: 100%;
+    background-color: #00a32a;
+}
+
+/* Terms and Privacy Section */
+.wpclm-form .terms-privacy {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.wpclm-form .terms-privacy a {
+    text-decoration: none;
+}
+
+.wpclm-form .terms-privacy a:hover {
+    text-decoration: underline;
+}
+
+/* Loading State */
+.wpclm-form.loading .wpclm-button {
+    position: relative;
+    color: transparent;
+}
+
+.wpclm-form.loading .wpclm-button::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: wpclm-spin 0.8s infinite linear;
+}
+
+@keyframes wpclm-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Accessibility Styles */
+.screen-reader-text {
+    border: 0;
+    clip: rect(1px, 1px, 1px, 1px);
+    clip-path: inset(50%);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+    width: 1px;
+    word-wrap: normal !important;
+}
+
+/* Focus States */
+input:focus,
+button:focus,
+a:focus {
+    outline: 2px solid #0073aa;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px rgba(0, 115, 170, 0.2);
+}
+
+/* Skip Link */
+.skip-link {
+    background-color: #0073aa;
+    color: #fff;
+    font-weight: 700;
+    left: 50%;
+    padding: 4px;
+    position: absolute;
+    transform: translateY(-100%);
+    transition: transform 0.3s;
+}
+
+.skip-link:focus {
+    transform: translateY(0%);
+}
+
+/* High Contrast Mode Support */
+@media (forced-colors: active) {
+    .wpclm-button {
+        border: 2px solid transparent;
+    }
+    
+    .wpclm-button:focus {
+        border-color: ButtonText;
+    }
+}
+
+/* Single Form Layouts */
+.wpclm-container.registration-only,
+.wpclm-container.reset-password-only {
+    min-height: auto;
+    padding: 2rem 0;
+}
+
+.registration-only .wpclm-background,
+.reset-password-only .wpclm-background {
+    display: none;
+}
+
+.registration-only .wpclm-form-container,
+.reset-password-only .wpclm-form-container {
+    margin-left: 0;
+    width: 100%;
+}
+
+/* Responsive Design */
+@media (max-width: 900px) {
+    .wpclm-background,
+    body.wpclm-template-page .wpclm-background {
+        display: none;
+    }
+
+    .wpclm-form-container,
+    body.wpclm-template-page .wpclm-form-container {
+        margin-left: 0;
+        width: 100%;
+        padding: 1rem;
+    }
+
+    .wpclm-form-wrapper {
+        padding: 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .wpclm-form-wrapper {
+        padding: 1.5rem;
+    }
+
+    .form-row {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .form-row .form-field {
+        width: 100%;
+    }
+
+    .form-field input[type="text"],
+    .form-field input[type="email"],
+    .form-field input[type="password"] {
+        font-size: 16px; /* Prevents zoom on mobile */
+    }
+}
+
+@media (min-width: 900px) {
+    .registration-only .wpclm-form-wrapper,
+    .reset-password-only .wpclm-form-wrapper {
+        max-width: 550px;
+        margin: 0 auto;
+    }
+}
+
+/* Password Requirements Box */
+.password-requirements {
+    margin-top: 10px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+}
+
+.password-requirements h4 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    color: #495057;
+}
+
+.password-requirements ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.password-requirements li {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+    font-size: 13px;
+    color: #6c757d;
+}
+
+.password-requirements .check {
+    margin-right: 8px;
+    color: #adb5bd;
+}
+
+.password-requirements li.valid {
+    color: #28a745;
+}
+
+.password-requirements li.valid .check {
+    color: #28a745;
+}
