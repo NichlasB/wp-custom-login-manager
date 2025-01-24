@@ -102,6 +102,9 @@ To contribute a translation, please visit the plugin's WordPress.org repository.
 
 == Changelog ==
 
+= 1.0.1 =
+* Updated README.md
+
 = 1.0.0 =
 * Initial release
 * Automatic login form integration

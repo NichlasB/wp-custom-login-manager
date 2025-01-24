@@ -98,6 +98,9 @@ This project is licensed under the GPL v2 or later - see the LICENSE file for de
 
 ## Changelog
 
+### 1.0.1
+- Updated README.md
+
 ### 1.0.0
 - Initial release
 - Modern login/registration system
