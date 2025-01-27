@@ -102,6 +102,9 @@ To contribute a translation, please visit the plugin's WordPress.org repository.
 
 == Changelog ==
 
+= 1.0.3 =
+* Fix: Removed duplicate Settings link from plugins page
+
 = 1.0.2 =
 * Fixed Composer autoloader conflict when multiple plugins use the same update checker
 

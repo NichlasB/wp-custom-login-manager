@@ -114,8 +114,6 @@ class WP_Custom_Login_Manager {
         register_activation_hook(__FILE__, array($this, 'activate'));
         register_deactivation_hook(__FILE__, array($this, 'deactivate'));
 
-        // Add plugin action links
-        add_filter('plugin_action_links_' . WPCLM_PLUGIN_BASENAME, array($this, 'add_plugin_action_links'));
     }
 
 /**
@@ -238,17 +236,6 @@ public function init_components() {
                 update_option($option, $value);
             }
         }
-    }
-
-    /**
-     * Add plugin action links
-     */
-    public function add_plugin_action_links($links) {
-        $plugin_links = array(
-            '<a href="' . admin_url('admin.php?page=wpclm-settings') . '">' . 
-            __('Settings', 'wp-custom-login-manager') . '</a>'
-        );
-        return array_merge($plugin_links, $links);
     }
 }
 

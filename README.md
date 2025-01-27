@@ -98,6 +98,9 @@ This project is licensed under the GPL v2 or later - see the LICENSE file for de
 
 ## Changelog
 
+### 1.0.3
+- Fix: Removed duplicate Settings link from plugins page
+
 ### 1.0.2
 - Fixed Composer autoloader conflict when multiple plugins use the same update checker
 
