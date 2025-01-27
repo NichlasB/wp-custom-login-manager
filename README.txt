@@ -3,7 +3,7 @@ Contributors: Alynt
 Tags: login, registration, custom login, user registration, authentication, email verification
 Requires at least: 5.0
 Tested up to: 6.7.1
-Stable tag: 1.0.1
+Stable tag: 1.0.2
 Requires PHP: 7.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -102,6 +102,9 @@ To contribute a translation, please visit the plugin's WordPress.org repository.
 
 == Changelog ==
 
+= 1.0.2 =
+* Fixed Composer autoloader conflict when multiple plugins use the same update checker
+
 = 1.0.1 =
 * Updated README.md
 
@@ -112,6 +115,9 @@ To contribute a translation, please visit the plugin's WordPress.org repository.
 * Enhanced security features
 
 == Upgrade Notice ==
+
+= 1.0.2 =
+This update fixes a compatibility issue where the plugin could conflict with other plugins using the same update checker system. Update recommended if you use multiple plugins with GitHub-based updates.
 
 = 1.0.0 =
 Initial release with automatic login form integration and WooCommerce compatibility.
