@@ -358,6 +358,7 @@ public function get_image_url($option_name, $default_type) {
         register_setting('wpclm_design_settings', 'wpclm_login_form_background_color');
         register_setting('wpclm_design_settings', 'wpclm_email_background_color');
         register_setting('wpclm_design_settings', 'wpclm_heading_color');
+        register_setting('wpclm_design_settings', 'wpclm_text_color');
 
         // Email Settings
         register_setting('wpclm_email_settings', 'wpclm_confirmation_email_template');
@@ -369,26 +370,26 @@ public function get_image_url($option_name, $default_type) {
         register_setting('wpclm_security_settings', 'wpclm_rate_limit_monitoring_period');
         register_setting('wpclm_security_settings', 'wpclm_disable_wp_login');
 
-register_setting('wpclm_security_settings', 'wpclm_rate_limit_max_attempts', array(
-    'type' => 'number',
-    'description' => 'Maximum number of login attempts before lockout',
-    'default' => 6,
-    'sanitize_callback' => array($this, 'sanitize_number_field')
-));
+        register_setting('wpclm_security_settings', 'wpclm_rate_limit_max_attempts', array(
+            'type' => 'number',
+            'description' => 'Maximum number of login attempts before lockout',
+            'default' => 6,
+            'sanitize_callback' => array($this, 'sanitize_number_field')
+        ));
 
-register_setting('wpclm_security_settings', 'wpclm_rate_limit_lockout_duration', array(
-    'type' => 'number',
-    'description' => 'Duration of lockout in seconds',
-    'default' => 900,
-    'sanitize_callback' => array($this, 'sanitize_number_field')
-));
+        register_setting('wpclm_security_settings', 'wpclm_rate_limit_lockout_duration', array(
+            'type' => 'number',
+            'description' => 'Duration of lockout in seconds',
+            'default' => 900,
+            'sanitize_callback' => array($this, 'sanitize_number_field')
+        ));
 
-register_setting('wpclm_security_settings', 'wpclm_rate_limit_monitoring_period', array(
-    'type' => 'number',
-    'description' => 'Period in seconds during which attempts are counted',
-    'default' => 3600,
-    'sanitize_callback' => array($this, 'sanitize_number_field')
-));
+        register_setting('wpclm_security_settings', 'wpclm_rate_limit_monitoring_period', array(
+            'type' => 'number',
+            'description' => 'Period in seconds during which attempts are counted',
+            'default' => 3600,
+            'sanitize_callback' => array($this, 'sanitize_number_field')
+        ));
 
         // Error Messages Settings
         register_setting('wpclm_message_settings', 'wpclm_message_login_failed');
@@ -840,6 +841,19 @@ register_setting('wpclm_security_settings', 'wpclm_rate_limit_monitoring_period'
                         <input type="text" name="wpclm_heading_color" id="wpclm_heading_color" 
                         value="<?php echo esc_attr(get_option('wpclm_heading_color', '#1D2327')); ?>" 
                         class="wpclm-color-picker">
+                    </td>
+                </tr>
+
+                <!-- Text Color -->
+                <tr>
+                    <th scope="row"><?php _e('Text Color', 'wp-custom-login-manager'); ?></th>
+                    <td>
+                        <input type="text" name="wpclm_text_color" id="wpclm_text_color" 
+                        value="<?php echo esc_attr(get_option('wpclm_text_color', '#4A5568')); ?>" 
+                        class="wpclm-color-picker">
+                        <p class="description">
+                            <?php _e('Color for general text, labels, and messages.', 'wp-custom-login-manager'); ?>
+                        </p>
                     </td>
                 </tr>
 

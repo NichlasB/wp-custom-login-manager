@@ -128,7 +128,7 @@ body.wpclm-template-page .wpclm-background {
 .wpclm-welcome-message {
     background: #fffce2;
     border-radius: 6px;
-    color: #4a5568;
+    color: var(--wpclm-text-color, #4a5568);
     font-size: 1rem;
     margin-bottom: 2rem;
     padding: 5px 10px;
@@ -178,7 +178,7 @@ body.wpclm-template-page .wpclm-background {
     display: block;
     margin-bottom: 0.5rem;
     font-weight: 500;
-    color: #4a5568;
+    color: var(--wpclm-text-color, #4a5568);
     font-size: 0.95rem;
 }
 
@@ -341,8 +341,33 @@ body.wpclm-template-page .wpclm-background {
 
 .wpclm-success-message {
     background-color: #f0f8f0;
-    color: #00a32a;
     border: 1px solid #c3e6cb;
+    color: #00a32a;
+}
+
+.wpclm-message {
+    background: #ffefe2;
+    border-radius: 6px;
+    color: var(--wpclm-text-color, #4a5568);
+    font-size: 1rem;
+    margin-bottom: 2rem;
+    padding: 5px 10px;
+}
+
+.wpclm-message a {
+    background: #f0f8f0;
+    border-radius: 10px;
+    border: 2px solid #c3e6cb;
+    color: #00a32a;
+    display: inline-block;
+    letter-spacing: 0.5px;
+    padding: 0 6px;
+}
+
+.wpclm-message a:hover {
+    background: #fffce3;
+    border: 2px solid #c9bf6d;
+    color: initial;
 }
 
 /* Error States */

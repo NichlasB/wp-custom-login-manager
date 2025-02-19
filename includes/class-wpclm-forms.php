@@ -512,6 +512,13 @@ public function render_login_page() {
     }
 
     $action = isset($_GET['action']) ? sanitize_text_field($_GET['action']) : 'login';
+
+    $text_color = get_option('wpclm_text_color', '#4A5568');
+        echo '<style>
+            :root {
+                --wpclm-text-color: ' . esc_attr($text_color) . ';
+            }
+        </style>';
     
     ob_start();
     ?>
@@ -1018,6 +1025,17 @@ public function update_login_url($new_url) {
         <div class="wpclm-form login-form" role="form">
             <form id="wpclm-login-form" method="post" novalidate>
                 <?php wp_nonce_field('wpclm-login-nonce', 'wpclm_login_nonce'); ?>
+                <?php
+                // Display messages from wpclm_login_messages filter
+                $login_messages = apply_filters('wpclm_login_messages', array());
+                if (!empty($login_messages) && is_array($login_messages)) {
+                    foreach ($login_messages as $message) {
+                        echo '<div class="wpclm-message" role="alert">';
+                        echo $this->escape_output($message, 'html');
+                        echo '</div>';
+                    }
+                }
+                ?>
                 <?php
                 // Display confirmation messages
                 $confirmation = isset($_GET['confirmation']) ? $this->escape_output($_GET['confirmation'], 'attr') : '';

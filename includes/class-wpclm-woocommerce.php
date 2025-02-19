@@ -61,7 +61,7 @@ class WPCLM_WooCommerce {
 
         // Handle order-pay redirects
         add_action('template_redirect', array($this, 'handle_order_pay_redirect'));
-
+        add_filter('wpclm_login_messages', array($this, 'display_checkout_message'));
     }
 
     /**
@@ -166,4 +166,20 @@ class WPCLM_WooCommerce {
             exit;
         }
     }
+
+    /**
+     * Display checkout message on login page if redirected from checkout
+     */
+    public function display_checkout_message($messages) {
+        // Only run if we were redirected from checkout
+        if (isset($_GET['redirect_to']) && strpos($_GET['redirect_to'], 'checkout') !== false) {
+            $register_url = add_query_arg('action', 'register', remove_query_arg('action'));
+            $messages[] = sprintf(
+                __('🛒 To checkout and complete your order, please log in or <a href="%s">create an account</a>.', 'wp-custom-login-manager'),
+                esc_url($register_url)
+            );
+        }
+        return $messages;
+    }
+
 }
