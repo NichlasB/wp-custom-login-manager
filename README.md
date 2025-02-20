@@ -98,6 +98,16 @@ This project is licensed under the GPL v2 or later - see the LICENSE file for de
 
 ## Changelog
 
+### 1.1.0
+- Implemented rate limiting system to prevent brute force attacks
+- Added IP-based monitoring of login attempts
+- Introduced configurable security settings for attempt limits and lockouts
+- Enhanced error handling with clear user feedback
+- Added robust IP detection supporting proxy configurations
+- Integrated Cloudflare Turnstile for advanced bot protection
+- Added Reoon Email Verification API for real-time email validation
+- Added new configuration options for security features
+
 ### 1.0.3
 - Fix: Removed duplicate Settings link from plugins page
 

@@ -370,6 +370,31 @@ public function get_image_url($option_name, $default_type) {
         register_setting('wpclm_security_settings', 'wpclm_rate_limit_monitoring_period');
         register_setting('wpclm_security_settings', 'wpclm_disable_wp_login');
 
+        // Cloudflare Turnstile Settings
+        register_setting('wpclm_security_settings', 'wpclm_turnstile_enabled');
+        register_setting('wpclm_security_settings', 'wpclm_turnstile_site_key');
+        register_setting('wpclm_security_settings', 'wpclm_turnstile_secret_key');
+        register_setting('wpclm_security_settings', 'wpclm_turnstile_forms', array(
+            'type' => 'array',
+            'default' => array('register')
+        ));
+
+        // Reoon Email Verification Settings
+        register_setting('wpclm_security_settings', 'wpclm_email_verification_enabled');
+        register_setting('wpclm_security_settings', 'wpclm_reoon_api_key');
+        register_setting('wpclm_security_settings', 'wpclm_reoon_verification_mode', array(
+            'type' => 'string',
+            'default' => 'quick'
+        ));
+
+        // Debug Settings
+        register_setting('wpclm_security_settings', 'wpclm_enable_debugging', array(
+            'type' => 'boolean',
+            'description' => 'Enable debug logging for troubleshooting',
+            'default' => false,
+            'sanitize_callback' => 'rest_sanitize_boolean'
+        ));
+
         register_setting('wpclm_security_settings', 'wpclm_rate_limit_max_attempts', array(
             'type' => 'number',
             'description' => 'Maximum number of login attempts before lockout',
@@ -952,6 +977,132 @@ private function render_security_settings() {
             </td>
         </tr>
 
+        <!-- Cloudflare Turnstile Settings -->
+        <tr>
+            <th scope="row" colspan="2">
+                <hr>
+                <h3><?php _e('Cloudflare Turnstile Settings', 'wp-custom-login-manager'); ?></h3>
+            </th>
+        </tr>
+        <tr>
+            <th scope="row"><?php _e('Enable Turnstile', 'wp-custom-login-manager'); ?></th>
+            <td>
+                <label>
+                    <input type="checkbox" name="wpclm_turnstile_enabled" 
+                        value="1" <?php checked(get_option('wpclm_turnstile_enabled', 0)); ?>>
+                    <?php _e('Enable Cloudflare Turnstile protection', 'wp-custom-login-manager'); ?>
+                </label>
+            </td>
+        </tr>
+        <tr>
+            <th scope="row"><?php _e('Site Key', 'wp-custom-login-manager'); ?></th>
+            <td>
+                <input type="text" name="wpclm_turnstile_site_key" 
+                    value="<?php echo esc_attr(get_option('wpclm_turnstile_site_key')); ?>" 
+                    class="regular-text">
+                <p class="description">
+                    <?php _e('Enter your Cloudflare Turnstile site key', 'wp-custom-login-manager'); ?>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <th scope="row"><?php _e('Secret Key', 'wp-custom-login-manager'); ?></th>
+            <td>
+                <input type="password" name="wpclm_turnstile_secret_key" 
+                    value="<?php echo esc_attr(get_option('wpclm_turnstile_secret_key')); ?>" 
+                    class="regular-text">
+                <p class="description">
+                    <?php _e('Enter your Cloudflare Turnstile secret key', 'wp-custom-login-manager'); ?>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <th scope="row"><?php _e('Enable On Forms', 'wp-custom-login-manager'); ?></th>
+            <td>
+                <?php
+                $enabled_forms = get_option('wpclm_turnstile_forms', array('register'));
+                $form_options = array(
+                    'register' => __('Registration Form', 'wp-custom-login-manager'),
+                    'login' => __('Login Form', 'wp-custom-login-manager'),
+                    'reset' => __('Password Reset Form', 'wp-custom-login-manager')
+                );
+                foreach ($form_options as $value => $label) : ?>
+                    <label style="display: block; margin-bottom: 5px;">
+                        <input type="checkbox" name="wpclm_turnstile_forms[]" 
+                            value="<?php echo esc_attr($value); ?>"
+                            <?php checked(in_array($value, $enabled_forms)); ?>>
+                        <?php echo esc_html($label); ?>
+                    </label>
+                <?php endforeach; ?>
+            </td>
+        </tr>
+
+        <!-- Reoon Email Verification Settings -->
+        <tr>
+            <th scope="row" colspan="2">
+                <hr>
+                <h3><?php _e('Email Verification Settings', 'wp-custom-login-manager'); ?></h3>
+            </th>
+        </tr>
+        <tr>
+            <th scope="row"><?php _e('Enable Email Verification', 'wp-custom-login-manager'); ?></th>
+            <td>
+                <label>
+                    <input type="checkbox" name="wpclm_email_verification_enabled" 
+                        value="1" <?php checked(get_option('wpclm_email_verification_enabled', 0)); ?>>
+                    <?php _e('Enable Reoon email verification', 'wp-custom-login-manager'); ?>
+                </label>
+            </td>
+        </tr>
+        <tr>
+            <th scope="row"><?php _e('API Key', 'wp-custom-login-manager'); ?></th>
+            <td>
+                <input type="password" name="wpclm_reoon_api_key" 
+                    value="<?php echo esc_attr(get_option('wpclm_reoon_api_key')); ?>" 
+                    class="regular-text">
+                <p class="description">
+                    <?php _e('Enter your Reoon API key', 'wp-custom-login-manager'); ?>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <th scope="row"><?php _e('Verification Mode', 'wp-custom-login-manager'); ?></th>
+            <td>
+                <select name="wpclm_reoon_verification_mode">
+                    <option value="quick" <?php selected(get_option('wpclm_reoon_verification_mode', 'quick'), 'quick'); ?>>
+                        <?php _e('Quick Mode (0.5s, less thorough)', 'wp-custom-login-manager'); ?>
+                    </option>
+                    <option value="power" <?php selected(get_option('wpclm_reoon_verification_mode', 'quick'), 'power'); ?>>
+                        <?php _e('Power Mode (1-60s, more thorough)', 'wp-custom-login-manager'); ?>
+                    </option>
+                </select>
+                <p class="description">
+                    <?php _e('Quick Mode is recommended for registration forms to maintain good user experience', 'wp-custom-login-manager'); ?>
+                </p>
+            </td>
+        </tr>
+
+        <!-- Debug Settings -->
+        <tr>
+            <th scope="row" colspan="2">
+                <hr>
+                <h3><?php _e('Debug Settings', 'wp-custom-login-manager'); ?></h3>
+            </th>
+        </tr>
+        <tr>
+            <th scope="row"><?php _e('Enable Debug Logging', 'wp-custom-login-manager'); ?></th>
+            <td>
+                <label>
+                    <input type="checkbox" name="wpclm_enable_debugging" 
+                        value="1" <?php checked(get_option('wpclm_enable_debugging', 0)); ?>>
+                    <?php _e('Enable debug logging for troubleshooting', 'wp-custom-login-manager'); ?>
+                </label>
+                <p class="description">
+                    <?php _e('When enabled, debug information will be logged to wpclm-debug.log in the wp-content directory.', 'wp-custom-login-manager'); ?>
+                </p>
+            </td>
+        </tr>
+
         <!-- Rate Limiting Settings -->
         <tr>
             <th scope="row"><?php _e('Rate Limiting', 'wp-custom-login-manager'); ?></th>
@@ -971,7 +1122,7 @@ private function render_security_settings() {
                     value="<?php echo esc_attr(get_option('wpclm_rate_limit_max_attempts', 50)); ?>" 
                     min="1" max="100">
                     <p class="description">
-                        <?php _e('Number of login attempts allowed before temporary lockout. (Default: 50 for testing, recommended: 5 for production)', 'wp-custom-login-manager'); ?>
+                        <?php _e('Number of login attempts allowed before temporary lockout. (Default: 6, max: 100. Recommended: 5-10 for production, up to 50 for testing)', 'wp-custom-login-manager'); ?>
                     </p>
                     
                     <!-- Lockout Duration -->
@@ -1180,7 +1331,7 @@ public function enqueue_admin_scripts($hook) {
         switch ($field) {
             case 'wpclm_rate_limit_max_attempts':
                 $min = 1;
-                $max = 20;
+                $max = 100;
                 $default = 6;
                 break;
             case 'wpclm_rate_limit_lockout_duration':

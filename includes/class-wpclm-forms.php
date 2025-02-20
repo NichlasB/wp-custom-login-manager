@@ -20,6 +20,20 @@ class WPCLM_Forms {
     private $rate_limiter;
 
     /**
+     * Email verifier instance
+     *
+     * @var WPCLM_Email_Verifier
+     */
+    private $email_verifier;
+
+    /**
+     * Turnstile instance
+     *
+     * @var WPCLM_Turnstile
+     */
+    private $turnstile;
+
+    /**
      * Sanitize and escape form data
      *
      * @param string $data The data to sanitize and escape
@@ -101,6 +115,34 @@ class WPCLM_Forms {
     }
 
     /**
+     * Clear existing messages
+     */
+    private function clear_messages() {
+        if (isset($_SESSION['wpclm_error_message'])) {
+            unset($_SESSION['wpclm_error_message']);
+        }
+        if (isset($_SESSION['wpclm_success_message'])) {
+            unset($_SESSION['wpclm_success_message']);
+        }
+    }
+
+    /**
+     * Set error message
+     */
+    private function set_error_message($message) {
+        $this->clear_messages();
+        $_SESSION['wpclm_error_message'] = $message;
+    }
+
+    /**
+     * Set success message
+     */
+    private function set_success_message($message) {
+        $this->clear_messages();
+        $_SESSION['wpclm_success_message'] = $message;
+    }
+
+    /**
     * Constructor
     */
     private function __construct() {
@@ -111,6 +153,12 @@ class WPCLM_Forms {
 
         // Initialize Rate Limiter instance
         $this->rate_limiter = WPCLM_Rate_Limiter::get_instance();
+
+        // Initialize Email Verifier instance
+        $this->email_verifier = WPCLM_Email_Verifier::get_instance();
+
+        // Initialize Turnstile instance
+        $this->turnstile = new WPCLM_Turnstile();
 
         // Add session handling
         add_action('init', function() {
@@ -339,6 +387,17 @@ public function enqueue_scripts() {
     // Enqueue Dashicons for password toggle
     wp_enqueue_style('dashicons');
 
+    // Add Turnstile script if enabled
+    if ($this->turnstile && $this->turnstile->is_enabled_for('login')) {
+        wp_enqueue_script(
+            'cf-turnstile',
+            'https://challenges.cloudflare.com/turnstile/v0/api.js',
+            array(),
+            null,
+            true
+        );
+    }
+
     // Add body class fix for admin bar
     $custom_css = "
     body.admin-bar.wpclm-template-page {
@@ -466,6 +525,26 @@ public function enqueue_scripts() {
         'strong' => __('Strong', 'wp-custom-login-manager'),
         'mismatch' => __('Passwords do not match', 'wp-custom-login-manager'),
     ));
+
+    // Only enqueue email verification script on registration form
+    if (isset($_GET['action']) && $_GET['action'] === 'register') {
+        wp_enqueue_script(
+            'wpclm-email-verification',
+            $this->get_asset_url('assets/js/email-verification.js'),
+            array('jquery'),
+            WPCLM_VERSION,
+            true
+        );
+
+        wp_localize_script('wpclm-email-verification', 'wpclm_vars', array(
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('wpclm_verify_email'),
+            'verifying_long' => __('Please wait while we verify your email address. This may take up to a minute...', 'wp-custom-login-manager'),
+            'invalid_format' => __('Please enter a valid email address', 'wp-custom-login-manager'),
+            'error_occurred' => __('An error occurred while verifying the email', 'wp-custom-login-manager')
+        ));
+    }
+
 }
 
 
@@ -1109,6 +1188,14 @@ public function update_login_url($new_url) {
                     echo $login_error;
                     echo '</div>';
                 }
+
+                // Display generic error message if present in URL
+                $error = isset($_GET['error']) ? $this->escape_output(urldecode($_GET['error']), 'html') : '';
+                if (isset($_GET['error'])) {
+                    echo '<div class="wpclm-error-message" role="alert">';
+                    echo $error;
+                    echo '</div>';
+                }
                 ?>
                 <input type="hidden" name="wpclm_action" value="login">
                 <input type="hidden" name="redirect_to" value="<?php echo $this->escape_output($redirect_to, 'attr'); ?>">
@@ -1169,6 +1256,12 @@ public function update_login_url($new_url) {
                 </span>
             </div>
 
+            <?php
+                if ($this->turnstile && $this->turnstile->is_enabled_for('login')) {
+                    $this->turnstile->render_widget();
+            }
+            ?>
+
             <div class="form-field submit-button">
                 <button type="submit" 
                 class="wpclm-button"
@@ -1208,7 +1301,7 @@ private function render_register_form() {
     }
 
     if (get_option('wpclm_disable_registration', 0)) {
-        echo '<div class="wpclm-form register-form">';
+        echo '<div class="wpclm-form wpclm-register-form register-form">';
         echo '<div class="wpclm-error-message" role="alert">';
         echo esc_html($this->messages->get_message('registration_disabled'));
         echo '</div>';
@@ -1222,50 +1315,18 @@ private function render_register_form() {
     }
     ?>
 
-    <div class="wpclm-form register-form">
+    <div class="wpclm-form wpclm-register-form register-form">
         <?php
-// Display success message
-        if (isset($_GET['success'])) {
-            echo '<div class="wpclm-success-message" role="alert">';
-            echo $this->escape_output(urldecode($_GET['success']), 'html');
-            echo '</div>';
+        // Display error message if present in session
+        $error_message = isset($_SESSION['wpclm_error_message']) ? $_SESSION['wpclm_error_message'] : '';
+        if (!empty($error_message)) {
+            echo $this->render_error_message($error_message);
         }
 
-        ?>
-        <?php
-        // Display error messages using parsed query parameters
-        if (isset($query_params['error'])) {
-
-            echo '<div class="wpclm-error-message" role="alert">';
-            if ($query_params['error'] === 'email_exists') {
-                echo $this->escape_output(__('This email address is already registered.', 'wp-custom-login-manager'), 'html');
-            } else {
-                $error_message = $this->messages->get_message($query_params['error']);
-                if (!empty($error_message)) {
-                    echo $this->escape_output($error_message, 'html');
-                } else {
-                    echo $this->escape_output(__('An error occurred. Please try again.', 'wp-custom-login-manager'), 'html');
-                }
-            }
-            echo '</div>';
-        }
-
-        // Display success messages
-        if (isset($query_params['registration'])) {
-            switch ($query_params['registration']) {
-                case 'check_email':
-                echo '<div class="wpclm-success-message" role="alert">';
-                echo $this->escape_output($this->messages->get_message('confirmation_sent'), 'html');
-                echo '</div>';
-                break;
-                case 'success':
-                echo '<div class="wpclm-success-message" role="alert">';
-                echo isset($query_params['message']) ? 
-                $this->escape_output(urldecode($query_params['message']), 'html') : 
-                $this->escape_output(__('Registration successful!', 'wp-custom-login-manager'), 'html');
-                echo '</div>';
-                break;
-            }
+        // Display success message if present in session
+        $success_message = isset($_SESSION['wpclm_success_message']) ? $_SESSION['wpclm_success_message'] : '';
+        if (!empty($success_message)) {
+            echo $this->render_success_message($success_message);
         }
         ?>
         <form id="wpclm-register-form" method="post" action="<?php echo esc_url($current_url); ?>">
@@ -1304,6 +1365,12 @@ private function render_register_form() {
                 </label>
             </div>
 
+            <?php
+            if ($this->turnstile && $this->turnstile->is_enabled_for('register')) {
+                $this->turnstile->render_widget();
+            }
+            ?>
+
             <div class="form-field submit-button">
                 <button type="submit" class="wpclm-button">
                     <?php _e('Create Account', 'wp-custom-login-manager'); ?>
@@ -1331,6 +1398,11 @@ private function render_register_form() {
             if (isset($_GET['checkemail']) && $_GET['checkemail'] == 'confirm') {
                 echo '<div class="wpclm-success-message" role="alert">';
                 echo $this->escape_output($this->messages->get_message('password_reset_sent'), 'html');
+                echo '</div>';
+            }
+            if (isset($_GET['login_error'])) {
+                echo '<div class="wpclm-error-message" role="alert">';
+                echo $this->escape_output(urldecode($_GET['login_error']), 'html');
                 echo '</div>';
             }
             if (isset($_GET['error'])) {
@@ -1361,6 +1433,12 @@ private function render_register_form() {
                         <?php _e('Enter your email address to reset your password', 'wp-custom-login-manager'); ?>
                     </span>
                 </div>
+
+                <?php
+                if ($this->turnstile && $this->turnstile->is_enabled_for('reset')) {
+                    $this->turnstile->render_widget();
+                }
+                ?>
 
                 <div class="form-field submit-button">
                     <button type="submit" class="wpclm-button">
@@ -1441,10 +1519,23 @@ private function render_register_form() {
     private function process_login() {
         if (!isset($_POST['wpclm_login_nonce']) || !wp_verify_nonce($_POST['wpclm_login_nonce'], 'wpclm-login-nonce')) {
             wp_safe_redirect(add_query_arg(array(
-                'error' => urlencode($this->messages->get_message('invalid_nonce'))
+                'login_error' => urlencode($this->messages->get_message('invalid_nonce'))
             )));
             exit;
         }
+
+        // Verify Turnstile if enabled
+        if ($this->turnstile && $this->turnstile->is_enabled_for('login')) {
+            $turnstile_response = isset($_POST['cf-turnstile-response']) ? $_POST['cf-turnstile-response'] : '';
+            $turnstile_result = $this->turnstile->verify_token($turnstile_response);
+            if (is_wp_error($turnstile_result)) {
+                wp_safe_redirect(add_query_arg(array(
+                    'login_error' => urlencode($turnstile_result->get_error_message())
+                )));
+                exit;
+            }
+        }
+
         // Check rate limiting before processing login
         $ip_address = $this->rate_limiter->get_client_ip();
         $rate_check = $this->rate_limiter->check_rate_limit($ip_address);
@@ -1538,11 +1629,51 @@ private function render_register_form() {
     */
     private function process_registration() {
         if (!isset($_POST['wpclm_register_nonce']) || !wp_verify_nonce($_POST['wpclm_register_nonce'], 'wpclm-register-nonce')) {
+            $this->set_error_message($this->messages->get_message('invalid_nonce'));
             wp_safe_redirect(add_query_arg(array(
-                'action' => 'register',
-                'error' => urlencode($this->messages->get_message('invalid_nonce'))
-            )));
+                'action' => 'register'
+            ), home_url(get_option('wpclm_login_url', '/account-login/'))));
             exit;
+        }
+
+        // Verify Turnstile if enabled
+        if ($this->turnstile && $this->turnstile->is_enabled_for('register')) {
+            $turnstile_response = isset($_POST['cf-turnstile-response']) ? $_POST['cf-turnstile-response'] : '';
+            $turnstile_result = $this->turnstile->verify_token($turnstile_response);
+            if (is_wp_error($turnstile_result)) {
+                $this->set_error_message($turnstile_result->get_error_message());
+                wp_safe_redirect(add_query_arg(array(
+                    'action' => 'register'
+                ), home_url(get_option('wpclm_login_url', '/account-login/'))));
+                exit;
+            }
+        }
+
+        // Verify email if enabled
+        if ($this->email_verifier && get_option('wpclm_email_verification_enabled')) {
+            error_log('WPCLM Email Verification: Starting verification');
+            error_log('WPCLM Email Verification Enabled: ' . (get_option('wpclm_email_verification_enabled') ? 'Yes' : 'No'));
+            error_log('WPCLM Email Verifier Instance: ' . ($this->email_verifier ? 'Yes' : 'No'));
+            
+            error_log('WPCLM Registration POST data: ' . print_r($_POST, true));
+            $email = isset($_POST['user_email']) ? sanitize_email($_POST['user_email']) : '';
+            error_log('WPCLM Email from POST: ' . $email);
+            error_log('WPCLM Email to verify: ' . $email);
+            
+            $email_result = $this->email_verifier->verify_email($email);
+            if (is_wp_error($email_result)) {
+                error_log('WPCLM Email Verification Error: ' . $email_result->get_error_message());
+                $this->set_error_message($email_result->get_error_message());
+                wp_safe_redirect(add_query_arg(array(
+                    'action' => 'register'
+                ), home_url(get_option('wpclm_login_url', '/account-login/'))));
+                exit;
+            }
+            error_log('WPCLM Email Verification: Completed successfully');
+        } else {
+            error_log('WPCLM Email Verification: Skipped - Feature not enabled or verifier not initialized');
+            error_log('Email Verification Enabled: ' . (get_option('wpclm_email_verification_enabled') ? 'Yes' : 'No'));
+            error_log('Email Verifier Instance: ' . ($this->email_verifier ? 'Yes' : 'No'));
         }
 
         // Check rate limiting before processing registration
@@ -1554,10 +1685,10 @@ private function render_register_form() {
                 __('Too many registration attempts. Please try again in %d seconds.', 'wp-custom-login-manager'),
                 $rate_check['remaining_time']
             );
+            $this->set_error_message($error_message);
             wp_safe_redirect(add_query_arg(array(
-                'action' => 'register',
-                'error' => urlencode($error_message)
-            )));
+                'action' => 'register'
+            ), home_url(get_option('wpclm_login_url', '/account-login/'))));
             exit;
         }
 
@@ -1567,10 +1698,10 @@ private function render_register_form() {
         remove_action('user_register', 'wp_send_new_user_notifications');
 
         if (get_option('wpclm_disable_registration', 0)) {
+            $this->set_error_message($this->messages->get_message('registration_disabled'));
             wp_safe_redirect(add_query_arg(array(
-                'action' => 'register',
-                'error' => $this->messages->get_message('registration_disabled')
-            )));
+                'action' => 'register'
+            ), home_url(get_option('wpclm_login_url', '/account-login/'))));
             exit;
         }
 
@@ -1579,33 +1710,26 @@ private function render_register_form() {
         $last_name = isset($_POST['last_name']) ? sanitize_text_field($_POST['last_name']) : '';
 
         if (empty($email) || empty($first_name) || empty($last_name)) {
+            $this->set_error_message($this->messages->get_message('required_fields'));
             wp_safe_redirect(add_query_arg(array(
-                'action' => 'register',
-                'error' => $this->messages->get_message('required_fields')
-            )));
+                'action' => 'register'
+            ), home_url(get_option('wpclm_login_url', '/account-login/'))));
             exit;
         }
 
         if (!is_email($email)) {
+            $this->set_error_message($this->messages->get_message('invalid_email'));
             wp_safe_redirect(add_query_arg(array(
-                'action' => 'register',
-                'error' => $this->messages->get_message('invalid_email')
-            )));
+                'action' => 'register'
+            ), home_url(get_option('wpclm_login_url', '/account-login/'))));
             exit;
         }
 
         if (email_exists($email)) {
-
-            $login_url = home_url(get_option('wpclm_login_url', '/account-login/'));
-            $redirect_url = add_query_arg(
-                array(
-                    'action' => 'register',
-                    'error' => 'email_exists'
-                ),
-                $login_url
-            );
-
-            wp_safe_redirect($redirect_url);
+            $this->set_error_message($this->messages->get_message('email_exists'));
+            wp_safe_redirect(add_query_arg(array(
+                'action' => 'register'
+            ), home_url(get_option('wpclm_login_url', '/account-login/'))));
             exit;
         }
 
@@ -1615,20 +1739,20 @@ private function render_register_form() {
         // Generate secure confirmation token
         $encrypted_token = $auth->generate_confirmation_token();
         if (!$encrypted_token) {
+            $this->set_error_message($this->messages->get_message('registration_failed'));
             wp_safe_redirect(add_query_arg(array(
-                'action' => 'register',
-                'error' => $this->messages->get_message('registration_failed')
-            )));
+                'action' => 'register'
+            ), home_url(get_option('wpclm_login_url', '/account-login/'))));
             exit;
         }
 
         // Validate token before storing data
         $token_data = $auth->validate_confirmation_token($encrypted_token);
         if (!$token_data) {
+            $this->set_error_message($this->messages->get_message('registration_failed'));
             wp_safe_redirect(add_query_arg(array(
-                'action' => 'register',
-                'error' => $this->messages->get_message('registration_failed')
-            )));
+                'action' => 'register'
+            ), home_url(get_option('wpclm_login_url', '/account-login/'))));
             exit;
         }
 
@@ -1646,20 +1770,20 @@ private function render_register_form() {
 
         if (!$sent) {
             delete_transient('wpclm_registration_' . $token_data['token']);
+            $this->set_error_message($this->messages->get_message('email_failed'));
             wp_safe_redirect(add_query_arg(array(
-                'action' => 'register',
-                'error' => $this->messages->get_message('email_failed')
-            )));
+                'action' => 'register'
+            ), home_url(get_option('wpclm_login_url', '/account-login/'))));
             exit;
         }
 
         // Record successful registration attempt for rate limiting
         $this->rate_limiter->record_attempt($ip_address);
 
+        $this->set_success_message($this->messages->get_message('confirmation_sent'));
         wp_safe_redirect(add_query_arg(array(
-            'action' => 'register',
-            'success' => $this->messages->get_message('confirmation_sent')
-        )));
+            'action' => 'register'
+        ), home_url(get_option('wpclm_login_url', '/account-login/'))));
         exit;
 
     }
@@ -1671,9 +1795,22 @@ private function render_register_form() {
         if (!isset($_POST['wpclm_lostpass_nonce']) || !wp_verify_nonce($_POST['wpclm_lostpass_nonce'], 'wpclm-lostpass-nonce')) {
             wp_safe_redirect(add_query_arg(array(
                 'action' => 'lostpassword',
-                'error' => urlencode($this->messages->get_message('invalid_nonce'))
+                'login_error' => urlencode($this->messages->get_message('invalid_nonce'))
             ), $login_url));
             exit;
+        }
+
+        // Verify Turnstile if enabled
+        if ($this->turnstile && $this->turnstile->is_enabled_for('login')) {
+            $turnstile_response = isset($_POST['cf-turnstile-response']) ? $_POST['cf-turnstile-response'] : '';
+            $turnstile_result = $this->turnstile->verify_token($turnstile_response);
+            if (is_wp_error($turnstile_result)) {
+                wp_safe_redirect(add_query_arg(array(
+                    'action' => 'lostpassword',
+                    'login_error' => urlencode($turnstile_result->get_error_message())
+                ), $login_url));
+                exit;
+            }
         }
 
         $user_login = isset($_POST['user_login']) ? sanitize_email($_POST['user_login']) : '';
@@ -1765,6 +1902,18 @@ private function render_register_form() {
             exit;
         }
 
+        // Verify Turnstile if enabled
+        if ($this->turnstile && $this->turnstile->is_enabled_for('reset')) {
+            $turnstile_response = isset($_POST['cf-turnstile-response']) ? $_POST['cf-turnstile-response'] : '';
+            $turnstile_result = $this->turnstile->verify_token($turnstile_response);
+            if (is_wp_error($turnstile_result)) {
+                wp_safe_redirect(add_query_arg(array(
+                    'error' => urlencode($turnstile_result->get_error_message())
+                )));
+                exit;
+            }
+        }
+
         $rp_key = isset($_POST['rp_key']) ? sanitize_text_field($_POST['rp_key']) : '';
         $rp_login = isset($_POST['rp_login']) ? sanitize_text_field($_POST['rp_login']) : '';
         $pass1 = isset($_POST['pass1']) ? $_POST['pass1'] : '';
@@ -1830,10 +1979,10 @@ private function render_register_form() {
     */
     private function process_password_setup() {
         if (!isset($_POST['wpclm_setpass_nonce']) || !wp_verify_nonce($_POST['wpclm_setpass_nonce'], 'wpclm-setpass-nonce')) {
+            $this->set_error_message($this->messages->get_message('invalid_nonce'));
             wp_safe_redirect(add_query_arg(array(
-                'action' => 'setpassword',
-                'error' => urlencode($this->messages->get_message('invalid_nonce'))
-            )));
+                'action' => 'setpassword'
+            ), home_url(get_option('wpclm_login_url', '/account-login/'))));
             exit;
         }
 
@@ -1843,9 +1992,9 @@ private function render_register_form() {
         $pass2 = isset($_POST['pass2']) ? $_POST['pass2'] : '';
 
         if (empty($rp_key) || empty($rp_login) || empty($pass1) || empty($pass2)) {
+            $this->set_error_message($this->messages->get_message('required_fields'));
             wp_safe_redirect(add_query_arg(array(
-                'action' => 'setpassword',
-                'error' => $this->messages->get_message('required_fields')
+                'action' => 'setpassword'
             ), home_url(get_option('wpclm_login_url', '/account-login/'))));
             exit;
         }
@@ -1853,17 +2002,17 @@ private function render_register_form() {
         // Verify key / login combo
         $user = check_password_reset_key($rp_key, $rp_login);
         if (is_wp_error($user)) {
+            $this->set_error_message($this->messages->get_message('invalid_key'));
             wp_safe_redirect(add_query_arg(array(
-                'action' => 'setpassword',
-                'error' => $this->messages->get_message('invalid_key')
+                'action' => 'setpassword'
             ), home_url(get_option('wpclm_login_url', '/account-login/'))));
             exit;
         }
 
         if ($pass1 !== $pass2) {
+            $this->set_error_message($this->messages->get_message('password_mismatch'));
             wp_safe_redirect(add_query_arg(array(
-                'action' => 'setpassword',
-                'error' => $this->messages->get_message('password_mismatch')
+                'action' => 'setpassword'
             ), home_url(get_option('wpclm_login_url', '/account-login/'))));
             exit;
         }
@@ -1872,9 +2021,9 @@ private function render_register_form() {
         $auth = WPCLM_Auth::get_instance();
         $validation_result = $auth->validate_password($pass1);
         if (is_wp_error($validation_result)) {
+            $this->set_error_message($validation_result->get_error_message());
             wp_safe_redirect(add_query_arg(array(
-                'action' => 'setpassword',
-                'error' => $validation_result->get_error_message()
+                'action' => 'setpassword'
             ), home_url(get_option('wpclm_login_url', '/account-login/'))));
             exit;
         }
@@ -1882,11 +2031,11 @@ private function render_register_form() {
         // Reset the password
         reset_password($user, $pass1);
 
-        // Instead of trying to log in automatically, redirect to login page with success message
+        // Set success message and redirect to login page
+        $this->set_success_message(__('Your password has been set successfully. Please log in with your email and password.', 'wp-custom-login-manager'));
         wp_safe_redirect(add_query_arg(array(
             'action' => 'login',
-            'registration' => 'completed',
-            'message' => urlencode(__('Your password has been set successfully. Please log in with your email and password.', 'wp-custom-login-manager'))
+            'registration' => 'completed'
         ), home_url(get_option('wpclm_login_url', '/account-login/'))));
         exit;
     }
@@ -1914,8 +2063,20 @@ private function render_register_form() {
      * Render error message
      */
     private function render_error_message($message) {
+        $this->clear_messages();
         return sprintf(
             '<div class="wpclm-error-message">%s</div>',
+            $this->escape_output($message, 'html')
+        );
+    }
+
+    /**
+     * Render success message
+     */
+    private function render_success_message($message) {
+        $this->clear_messages();
+        return sprintf(
+            '<div class="wpclm-success-message">%s</div>',
             $this->escape_output($message, 'html')
         );
     }

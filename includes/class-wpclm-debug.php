@@ -12,6 +12,11 @@ if (!defined('ABSPATH')) {
 
 class WPCLM_Debug {
     /**
+     * Maximum log file size (5MB)
+     */
+    private $max_file_size = 5242880;
+
+    /**
      * Singleton instance
      */
     private static $instance = null;
@@ -75,20 +80,27 @@ class WPCLM_Debug {
     /**
     * Log message to debug file
     *
-    * @param string $message Message to log
+    * @param string|array $message Message or data to log
     * @param mixed $data Optional data to log
     * @param string $type Log type (info, error, warning)
-     */
+    */
     public function log($message, $data = null, $type = 'info') {
         if (!$this->is_enabled) {
             return;
         }
 
-        $timestamp = current_time('Y-m-d H:i:s');
-        $log_message = sprintf("[%s] [%s] %s", $timestamp, strtoupper($type), $message);
+        // Check file size and rotate if needed
+        $this->rotate_log();
 
-        if ($data !== null) {
-            $log_message .= ': ' . (is_array($data) || is_object($data) ? print_r($data, true) : $data);
+        $timestamp = current_time('Y-m-d H:i:s');
+        
+        if (is_array($message)) {
+            $log_message = sprintf("[%s] [%s] %s", $timestamp, strtoupper($type), json_encode($message));
+        } else {
+            $log_message = sprintf("[%s] [%s] %s", $timestamp, strtoupper($type), $message);
+            if ($data !== null) {
+                $log_message .= ': ' . (is_array($data) || is_object($data) ? json_encode($data) : $data);
+            }
         }
 
         $log_message .= "\n";
@@ -218,6 +230,23 @@ class WPCLM_Debug {
     public function clear_log() {
         if (file_exists($this->log_file)) {
             unlink($this->log_file);
+        }
+    }
+
+    /**
+     * Rotate log file if it exceeds max size
+     */
+    private function rotate_log() {
+        if (!file_exists($this->log_file)) {
+            return;
+        }
+
+        if (filesize($this->log_file) > $this->max_file_size) {
+            $backup_file = $this->log_file . '.1';
+            if (file_exists($backup_file)) {
+                unlink($backup_file);
+            }
+            rename($this->log_file, $backup_file);
         }
     }
 

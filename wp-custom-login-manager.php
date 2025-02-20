@@ -3,7 +3,7 @@
  * Plugin Name: WP Custom Login Manager
  * Plugin URI: 
  * Description: A modern, secure custom login and registration system for WordPress with email verification.
- * Version: 1.0.2
+ * Version: 1.1.0
  * Requires at least: 5.0
  * Requires PHP: 7.2
  * Author: CueFox
@@ -53,7 +53,7 @@ if (class_exists('YahnisElsts\PluginUpdateChecker\v5\PucFactory')) {
 }
 
 // Plugin constants
-define('WPCLM_VERSION', '1.0.2');
+define('WPCLM_VERSION', '1.1.0');
 define('WPCLM_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('WPCLM_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('WPCLM_PLUGIN_BASENAME', plugin_basename(__FILE__));
@@ -137,6 +137,8 @@ private function include_files() {
     require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-settings.php';
     require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-messages.php';
     require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-rate-limiter.php';
+    require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-email-verifier.php';
+    require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-turnstile.php';
     require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-forms.php';
     require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-auth.php';
     require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-redirects.php';

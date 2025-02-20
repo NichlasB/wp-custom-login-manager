@@ -3,7 +3,7 @@ Contributors: Alynt
 Tags: login, registration, custom login, user registration, authentication, email verification
 Requires at least: 5.0
 Tested up to: 6.7.1
-Stable tag: 1.0.3
+Stable tag: 1.1.0
 Requires PHP: 7.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -102,6 +102,16 @@ To contribute a translation, please visit the plugin's WordPress.org repository.
 
 == Changelog ==
 
+= 1.1.0 =
+* Added rate limiting functionality to protect against brute force attacks
+* Enhanced security with IP-based login attempt monitoring
+* Added configurable settings for maximum login attempts and lockout duration
+* Improved error handling and user feedback for login attempts
+* Added secure IP detection through multiple proxy headers
+* Integrated Cloudflare Turnstile for enhanced bot protection
+* Added Reoon Email Verification API integration for email validation
+* Added configurable settings for Turnstile and Email verification
+
 = 1.0.3 =
 * Fix: Removed duplicate Settings link from plugins page
 
@@ -118,6 +128,9 @@ To contribute a translation, please visit the plugin's WordPress.org repository.
 * Enhanced security features
 
 == Upgrade Notice ==
+
+= 1.1.0 =
+Security enhancement: This version adds rate limiting, Cloudflare Turnstile integration, and email verification. Please configure your API keys in the settings after updating.
 
 = 1.0.2 =
 This update fixes a compatibility issue where the plugin could conflict with other plugins using the same update checker system. Update recommended if you use multiple plugins with GitHub-based updates.

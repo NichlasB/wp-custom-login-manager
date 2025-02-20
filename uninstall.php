@@ -56,6 +56,14 @@ $options = array(
     'wpclm_rate_limit_lockout_duration',
     'wpclm_rate_limit_monitoring_period',
     'wpclm_minify_assets',
+    'wpclm_turnstile_enabled',
+    'wpclm_turnstile_site_key',
+    'wpclm_turnstile_secret_key',
+    'wpclm_turnstile_forms',
+    'wpclm_email_verification_enabled',
+    'wpclm_reoon_api_key',
+    'wpclm_reoon_verification_mode',
+    'wpclm_enable_debugging',
 
     // Message Settings
     'wpclm_message_login_failed',
