@@ -98,6 +98,11 @@ This project is licensed under the GPL v2 or later - see the LICENSE file for de
 
 ## Changelog
 
+### 1.1.1
+- Fixed: Password reset form now properly displays error messages when security verification fails
+- Fixed: Improved error message handling using WordPress transients for more reliable message display
+- Fixed: Cleaned up debug code and optimized error message styling
+
 ### 1.1.0
 - Implemented rate limiting system to prevent brute force attacks
 - Added IP-based monitoring of login attempts

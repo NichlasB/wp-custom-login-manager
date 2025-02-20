@@ -3,7 +3,7 @@ Contributors: Alynt
 Tags: login, registration, custom login, user registration, authentication, email verification
 Requires at least: 5.0
 Tested up to: 6.7.1
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 Requires PHP: 7.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -102,6 +102,11 @@ To contribute a translation, please visit the plugin's WordPress.org repository.
 
 == Changelog ==
 
+= 1.1.1 =
+* Fixed: Password reset form now properly displays error messages when security verification fails
+* Fixed: Improved error message handling using WordPress transients for more reliable message display
+* Fixed: Cleaned up debug code and optimized error message styling
+
 = 1.1.0 =
 * Added rate limiting functionality to protect against brute force attacks
 * Enhanced security with IP-based login attempt monitoring
@@ -128,6 +133,9 @@ To contribute a translation, please visit the plugin's WordPress.org repository.
 * Enhanced security features
 
 == Upgrade Notice ==
+
+= 1.1.1 =
+This update fixes an important issue with error message display during password resets. If you're using the password reset functionality with Turnstile verification, we recommend updating.
 
 = 1.1.0 =
 Security enhancement: This version adds rate limiting, Cloudflare Turnstile integration, and email verification. Please configure your API keys in the settings after updating.

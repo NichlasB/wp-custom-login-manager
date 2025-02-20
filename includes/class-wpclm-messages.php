@@ -97,6 +97,7 @@ class WPCLM_Messages {
             'invalid_key' => __('Invalid or expired key. Please try again.', 'wp-custom-login-manager'),
             'invalid_combo' => __('Invalid password reset key combination.', 'wp-custom-login-manager'),
             'invalid_nonce' => __('Security verification failed. Please try again.', 'wp-custom-login-manager'),
+            'security_verification_failed' => __('Please complete the security verification before submitting the form.', 'wp-custom-login-manager'),
 
             // Generic messages
             'generic_error' => __('An error occurred. Please try again.', 'wp-custom-login-manager'),

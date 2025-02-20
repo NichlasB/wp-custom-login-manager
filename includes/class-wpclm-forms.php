@@ -646,24 +646,65 @@ public function render_login_page() {
 private function render_reset_password_form() {
     $rp_key = isset($_GET['key']) ? sanitize_text_field($_GET['key']) : '';
     $rp_login = isset($_GET['login']) ? sanitize_text_field($_GET['login']) : '';
-
-    if (empty($rp_key) || empty($rp_login)) {
-        return $this->render_error_message($this->escape_output(__('Invalid password setup link.', 'wp-custom-login-manager'), 'html'));
+    
+    // Get error from transient if available
+    $error_message = '';
+    if (isset($_GET['error_key'])) {
+        $error_key = sanitize_text_field($_GET['error_key']);
+        $error_message = get_transient($error_key);
+        if ($error_message) {
+            delete_transient($error_key);
+        }
+    }
+    
+    // Fallback to URL parameter if no transient
+    if (empty($error_message) && isset($_GET['error'])) {
+        $error_message = urldecode($_GET['error']);
     }
     ?>
     <div class="wpclm-form resetpass-form">
-        <?php
+    <style>
+        .wpclm-error-message {
+            display: block;
+            visibility: visible;
+            opacity: 1;
+            color: red;
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid red;
+            background-color: #fff3f3;
+        }
+    </style>
+    <?php
+    
+    // Always display error messages first if they exist
+    if (!empty($error_message)) {
+        echo '<div class="wpclm-error-message" role="alert">';
+        echo $this->escape_output($error_message, 'html');
+        echo '</div>';
+    }
+
         // Display success message if password was changed
         if (isset($_GET['password']) && $_GET['password'] === 'changed') {
             echo '<div class="wpclm-success-message" role="alert">';
             echo $this->escape_output($this->messages->get_message('password_reset_success'), 'html');
             echo '</div>';
         }
-        // Display error message if there was an error
-        if (isset($_GET['error'])) {
-            echo '<div class="wpclm-error-message" role="alert">';
-            echo $this->escape_output(urldecode($_GET['error']), 'html');
+
+        // Check for invalid reset key/login after showing any messages
+        if (empty($rp_key) || empty($rp_login)) {
+            echo '<div class="wpclm-error-message" role="alert" style="color: red; margin-bottom: 15px;">';
+            echo $this->escape_output(__('Invalid password setup link.', 'wp-custom-login-manager'), 'html');
             echo '</div>';
+            ?>
+            <div class="form-links">
+                <a href="<?php echo esc_url(remove_query_arg(array('action', 'key', 'login', 'error'))); ?>">
+                    <?php _e('Back to Login', 'wp-custom-login-manager'); ?>
+                </a>
+            </div>
+            </div>
+            <?php
+            return;
         }
         ?>
         <form id="wpclm-resetpass-form" method="post">
@@ -708,6 +749,13 @@ private function render_reset_password_form() {
                 required 
                 aria-required="true">
             </div>
+
+            <?php
+            // Add Turnstile widget if enabled
+            if ($this->turnstile && $this->turnstile->is_enabled_for('reset')) {
+                $this->turnstile->render_widget();
+            }
+            ?>
 
             <div class="form-field submit-button">
                 <button type="submit" class="wpclm-button">
@@ -1894,24 +1942,49 @@ private function render_register_form() {
     * Process reset password form
     */
     private function process_reset_password() {
-        if (!isset($_POST['wpclm_resetpass_nonce']) || !wp_verify_nonce($_POST['wpclm_resetpass_nonce'], 'wpclm-resetpass-nonce')) {
-            wp_safe_redirect(add_query_arg(array(
-                'action' => 'resetpass',
-                'error' => urlencode($this->messages->get_message('invalid_nonce'))
-            )));
-            exit;
-        }
-
-        // Verify Turnstile if enabled
+        // Get common variables first
+        $rp_key = isset($_POST['rp_key']) ? sanitize_text_field($_POST['rp_key']) : '';
+        $rp_login = isset($_POST['rp_login']) ? sanitize_text_field($_POST['rp_login']) : '';
+        $login_url = home_url(get_option('wpclm_login_url', '/account-login/'));
+    
+        // Debug the incoming POST data
+        error_log('WPCLM Debug - Processing reset password form');
+        error_log('WPCLM Debug - POST data: ' . print_r($_POST, true));
+    
+        // Verify Turnstile first if enabled
         if ($this->turnstile && $this->turnstile->is_enabled_for('reset')) {
             $turnstile_response = isset($_POST['cf-turnstile-response']) ? $_POST['cf-turnstile-response'] : '';
             $turnstile_result = $this->turnstile->verify_token($turnstile_response);
+
             if (is_wp_error($turnstile_result)) {
-                wp_safe_redirect(add_query_arg(array(
-                    'error' => urlencode($turnstile_result->get_error_message())
-                )));
+                $error_message = $this->messages->get_message('security_verification_failed');
+                
+                // Store error in transient
+                $error_key = 'wpclm_reset_error_' . md5($rp_key . $rp_login);
+                set_transient($error_key, $error_message, 30);
+                
+                // Build redirect URL
+                $redirect_url = add_query_arg(array(
+                    'action' => 'resetpass',
+                    'key' => $rp_key,
+                    'login' => $rp_login,
+                    'error_key' => $error_key
+                ), $login_url);
+                
+                wp_safe_redirect($redirect_url);
                 exit;
             }
+        }
+
+        // Then verify nonce
+        if (!isset($_POST['wpclm_resetpass_nonce']) || !wp_verify_nonce($_POST['wpclm_resetpass_nonce'], 'wpclm-resetpass-nonce')) {
+            wp_safe_redirect(add_query_arg(array(
+                'action' => 'resetpass',
+                'key' => $rp_key,
+                'login' => $rp_login,
+                'error' => urlencode($this->messages->get_message('invalid_nonce'))
+            ), $login_url));
+            exit;
         }
 
         $rp_key = isset($_POST['rp_key']) ? sanitize_text_field($_POST['rp_key']) : '';
