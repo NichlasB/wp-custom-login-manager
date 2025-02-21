@@ -339,10 +339,47 @@ body.wpclm-template-page .wpclm-background {
     text-align: center;
 }
 
+.wpclm-email-validation.error {
+    background-color: #fff2f2;
+    color: #d63638;
+    border: 1px solid #ffcece;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 4px;
+}
+
+.dashicons.dashicons-no {
+    margin-top: 2px;
+    margin-right: -2px;
+}
+
+.wpclm-contact-link {
+    background: #f0f8f0;
+    border-radius: 10px;
+    border: 2px solid #c3e6cb;
+    color: #00a32a;
+    display: inline-block;
+    letter-spacing: 0.5px;
+    padding: 0 6px;
+}
+
+.wpclm-contact-link:hover {
+    background: #fffce3;
+    border: 2px solid #c9bf6d;
+    color: initial;
+}
+
 .wpclm-success-message {
     background-color: #f0f8f0;
     border: 1px solid #c3e6cb;
     color: #00a32a;
+}
+
+.wpclm-email-validation.success {
+    background-color: #f0f8f0;
+    border: 1px solid #c3e6cb;
+    color: #00a32a;
+    padding: 5px 10px;
 }
 
 .wpclm-message {

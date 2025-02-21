@@ -369,6 +369,16 @@ public function get_image_url($option_name, $default_type) {
         register_setting('wpclm_security_settings', 'wpclm_rate_limit_lockout_duration');
         register_setting('wpclm_security_settings', 'wpclm_rate_limit_monitoring_period');
         register_setting('wpclm_security_settings', 'wpclm_disable_wp_login');
+        register_setting('wpclm_security_settings', 'wpclm_contact_url', array(
+            'type' => 'string',
+            'default' => '/contact/',
+            'sanitize_callback' => 'esc_url_raw'
+        ));
+        register_setting('wpclm_security_settings', 'wpclm_allow_role_emails', array(
+            'type' => 'boolean',
+            'default' => false,
+            'sanitize_callback' => 'rest_sanitize_boolean'
+        ));
 
         // Cloudflare Turnstile Settings
         register_setting('wpclm_security_settings', 'wpclm_turnstile_enabled');
@@ -1078,6 +1088,30 @@ private function render_security_settings() {
                 </select>
                 <p class="description">
                     <?php _e('Quick Mode is recommended for registration forms to maintain good user experience', 'wp-custom-login-manager'); ?>
+                </p>
+            </td>
+        </tr>
+        <tr>
+        <th scope="row"><?php _e('Contact Link URL', 'wp-custom-login-manager'); ?></th>
+            <td>
+                <input type="text" name="wpclm_contact_url" 
+                    value="<?php echo esc_attr(get_option('wpclm_contact_url', '/contact/')); ?>" 
+                    class="regular-text">
+                    <p class="description">
+                        <?php _e('Enter the URL for the contact link shown in error messages. Can be absolute (https://example.com/contact) or relative (/contact/)', 'wp-custom-login-manager'); ?>
+                    </p>
+                </td>
+            </tr>
+            <tr>
+            <th scope="row"><?php _e('Role-Based Emails', 'wp-custom-login-manager'); ?></th>
+            <td>
+                <label>
+                    <input type="checkbox" name="wpclm_allow_role_emails" 
+                        value="1" <?php checked(get_option('wpclm_allow_role_emails', false)); ?>>
+                    <?php _e('Allow role-based email addresses (like info@, admin@, support@)', 'wp-custom-login-manager'); ?>
+                </label>
+                <p class="description">
+                    <?php _e('When enabled, users can register with role-based email addresses. For security reasons, it\'s recommended to keep this disabled.', 'wp-custom-login-manager'); ?>
                 </p>
             </td>
         </tr>

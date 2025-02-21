@@ -98,6 +98,12 @@ This project is licensed under the GPL v2 or later - see the LICENSE file for de
 
 ## Changelog
 
+### 1.1.2
+* Added option to allow role-based email addresses during registration
+* Added configurable contact URL in security settings for error messages
+* Enhanced contact link in error messages to use configured URL instead of hardcoded path
+* Added proper URL escaping for contact links
+
 ### 1.1.1
 - Fixed: Password reset form now properly displays error messages when security verification fails
 - Fixed: Improved error message handling using WordPress transients for more reliable message display

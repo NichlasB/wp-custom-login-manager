@@ -86,7 +86,12 @@ class WPCLM_Email_Verifier {
                 'email' => $email,
                 'result' => $cached_result
             ));
-            return $cached_result === 'valid';
+            if ($cached_result === 'valid') {
+                return true;
+            }
+            return new WP_Error('invalid_email', $this->format_error_message(
+                __('This email address appears to be invalid. Please check and try again.', 'wp-custom-login-manager')
+            ));
         }
 
         $api_key = get_option('wpclm_reoon_api_key');
@@ -174,6 +179,24 @@ class WPCLM_Email_Verifier {
     }
 
     /**
+     * Formats an error message with a contact link
+     *
+     * @param string $message The base error message
+     * @return string Formatted message with contact link
+     */
+    private function format_error_message($message) {
+        $contact_url = get_option('wpclm_contact_url', '/contact/');
+        return sprintf(
+            '%s %s',
+            $message,
+            sprintf(
+                __('If you need help creating an account, %s.', 'wp-custom-login-manager'),
+                '<a href="' . esc_url($contact_url) . '" class="wpclm-contact-link" target="_blank">' . __('contact us', 'wp-custom-login-manager') . '</a>'
+            )
+        );
+    }
+
+    /**
      * Get appropriate error message based on API response
      */
     private function get_error_message($result) {
@@ -181,39 +204,59 @@ class WPCLM_Email_Verifier {
         
         // Common checks for both modes
         if ($result->is_disposable) {
-            return __('Please use a permanent email address. Temporary or disposable email addresses are not allowed.', 'wp-custom-login-manager');
+            return $this->format_error_message(
+                __('Please use a permanent email address. Temporary or disposable email addresses are not allowed.', 'wp-custom-login-manager')
+            );
         }
-        if (isset($result->is_role_account) && $result->is_role_account) {
-            return __('Please use a personal email address. Role-based email addresses (like info@, admin@, etc.) are not allowed.', 'wp-custom-login-manager');
+        if (!get_option('wpclm_allow_role_emails', false) && isset($result->is_role_account) && $result->is_role_account) {
+            return $this->format_error_message(
+                __('Please use a personal email address. Role-based email addresses (like info@, admin@, etc.) are not allowed.', 'wp-custom-login-manager')
+            );
         }
         if (!$result->mx_accepts_mail || $result->mx_records === null) {
-            return __('This email address appears to be invalid. The domain does not accept emails. Please check the address or use a different one.', 'wp-custom-login-manager');
+            return $this->format_error_message(
+                __('This email address appears to be invalid. The domain does not accept emails. Please check the address or use a different one.', 'wp-custom-login-manager')
+            );
         }
         if (isset($result->has_inbox_full) && $result->has_inbox_full) {
-            return __('This email inbox is full. Please use a different email address.', 'wp-custom-login-manager');
+            return $this->format_error_message(
+                __('This email inbox is full. Please use a different email address.', 'wp-custom-login-manager')
+            );
         }
         if (isset($result->is_disabled) && $result->is_disabled) {
-            return __('This email address has been disabled. Please use a different email address.', 'wp-custom-login-manager');
+            return $this->format_error_message(
+                __('This email address has been disabled. Please use a different email address.', 'wp-custom-login-manager')
+            );
         }
         
         // Power mode specific checks
         if ($mode === 'power') {
             if ($result->status !== 'safe') {
-                return __('This email address has been flagged as potentially unsafe. Please use a different email address.', 'wp-custom-login-manager');
+                return $this->format_error_message(
+                    __('This email address has been flagged as potentially unsafe. Please use a different email address.', 'wp-custom-login-manager')
+                );
             }
             if (!$result->is_safe_to_send) {
-                return __('This email address cannot receive emails safely. Please use a different address.', 'wp-custom-login-manager');
+                return $this->format_error_message(
+                    __('This email address cannot receive emails safely. Please use a different address.', 'wp-custom-login-manager')
+                );
             }
             if (!$result->is_deliverable) {
-                return __('This email address appears to be undeliverable. Please check the address or use a different one.', 'wp-custom-login-manager');
+                return $this->format_error_message(
+                    __('This email address appears to be undeliverable. Please check the address or use a different one.', 'wp-custom-login-manager')
+                );
             }
             if ($result->overall_score < 80) {
-                return __('This email address does not meet our quality requirements. Please use a different address.', 'wp-custom-login-manager');
+                return $this->format_error_message(
+                    __('This email address does not meet our quality requirements. Please use a different address.', 'wp-custom-login-manager')
+                );
             }
         }
         
         // Default error for any other cases
-        return __('This email address appears to be invalid. Please check and try again.', 'wp-custom-login-manager');
+        return $this->format_error_message(
+            __('This email address appears to be invalid. Please check and try again.', 'wp-custom-login-manager')
+        );
     }
 
     public function ajax_verify_email() {

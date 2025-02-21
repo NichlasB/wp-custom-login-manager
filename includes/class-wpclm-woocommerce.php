@@ -175,7 +175,7 @@ class WPCLM_WooCommerce {
         if (isset($_GET['redirect_to']) && strpos($_GET['redirect_to'], 'checkout') !== false) {
             $register_url = add_query_arg('action', 'register', remove_query_arg('action'));
             $messages[] = sprintf(
-                __('🛒 To checkout and complete your order, please log in or <a href="%s">create an account</a>. first', 'wp-custom-login-manager'),
+                __('👉 To checkout and complete your order, please log in or <a href="%s">create an account</a> first.', 'wp-custom-login-manager'),
                 esc_url($register_url)
             );
         }

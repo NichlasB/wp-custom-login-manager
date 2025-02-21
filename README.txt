@@ -3,7 +3,7 @@ Contributors: Alynt
 Tags: login, registration, custom login, user registration, authentication, email verification
 Requires at least: 5.0
 Tested up to: 6.7.1
-Stable tag: 1.1.1
+Stable tag: 1.1.2
 Requires PHP: 7.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -101,6 +101,12 @@ WP Custom Login Manager is translation-ready. To create a translation:
 To contribute a translation, please visit the plugin's WordPress.org repository.
 
 == Changelog ==
+
+= 1.1.2 =
+* Added: Option to allow role-based email addresses during registration
+* Added: Configurable contact URL in security settings for error messages
+* Enhancement: Contact link in error messages now uses the configured URL instead of hardcoded path
+* Security: Added proper URL escaping for contact links
 
 = 1.1.1 =
 * Fixed: Password reset form now properly displays error messages when security verification fails
