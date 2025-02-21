@@ -64,6 +64,8 @@ $options = array(
     'wpclm_reoon_api_key',
     'wpclm_reoon_verification_mode',
     'wpclm_enable_debugging',
+    'wpclm_contact_url',
+    'wpclm_allow_role_emails',
 
     // Message Settings
     'wpclm_message_login_failed',

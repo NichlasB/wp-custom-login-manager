@@ -147,12 +147,18 @@ class WPCLM_Email_Verifier {
             return new WP_Error('invalid_response', __('Invalid API response. Please try again later.', 'wp-custom-login-manager'));
         }
 
-       // Handle response based on verification mode
+        $allow_role_emails = get_option('wpclm_allow_role_emails', false);
+        $is_role_based = ($result->status === 'role_account' || (isset($result->is_role_account) && $result->is_role_account));
+
         if ($mode === 'quick') {
-            $is_valid = $result->status === 'valid';
+            $is_valid = $result->status === 'valid' &&
+                        ($allow_role_emails || !$is_role_based);
         } else {
             // Power mode has additional checks
-            $is_valid = $result->status === 'safe' && 
+            $status_valid = $result->status === 'safe' || 
+                            ($allow_role_emails && $is_role_based);
+                            
+            $is_valid = $status_valid && 
                         $result->is_safe_to_send && 
                         $result->is_deliverable && 
                         $result->overall_score >= 80; // Minimum acceptable score
@@ -208,7 +214,7 @@ class WPCLM_Email_Verifier {
                 __('Please use a permanent email address. Temporary or disposable email addresses are not allowed.', 'wp-custom-login-manager')
             );
         }
-        if (!get_option('wpclm_allow_role_emails', false) && isset($result->is_role_account) && $result->is_role_account) {
+        if (!get_option('wpclm_allow_role_emails', false) && $is_role_based) {
             return $this->format_error_message(
                 __('Please use a personal email address. Role-based email addresses (like info@, admin@, etc.) are not allowed.', 'wp-custom-login-manager')
             );

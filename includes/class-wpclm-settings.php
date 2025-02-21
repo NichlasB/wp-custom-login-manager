@@ -1108,7 +1108,7 @@ private function render_security_settings() {
                 <label>
                     <input type="checkbox" name="wpclm_allow_role_emails" 
                         value="1" <?php checked(get_option('wpclm_allow_role_emails', false)); ?>>
-                    <?php _e('Allow role-based email addresses (like info@, admin@, support@)', 'wp-custom-login-manager'); ?>
+                    <?php _e('Allow role-based email addresses (like info@, contact@, @orders, admin@, team@, etc.)', 'wp-custom-login-manager'); ?>
                 </label>
                 <p class="description">
                     <?php _e('When enabled, users can register with role-based email addresses. For security reasons, it\'s recommended to keep this disabled.', 'wp-custom-login-manager'); ?>

@@ -98,6 +98,11 @@ This project is licensed under the GPL v2 or later - see the LICENSE file for de
 
 ## Changelog
 
+### 1.1.3
+* Fixed role-based email detection to handle both API status and flag
+* Fixed role-based email validation to properly respect allow setting
+* Enhanced role-based email examples in settings description
+
 ### 1.1.2
 * Added option to allow role-based email addresses during registration
 * Added configurable contact URL in security settings for error messages
