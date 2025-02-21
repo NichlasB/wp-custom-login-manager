@@ -98,6 +98,13 @@ This project is licensed under the GPL v2 or later - see the LICENSE file for de
 
 ## Changelog
 
+### 1.1.8
+- Documentation: Updated plugin description for clarity
+
+### 1.1.7
+* Removed unnecessary whitespace in main plugin file
+* Improved code readability
+
 ### 1.1.6
 * Fixed and optimized GitHub-based update system
 * Improved update reliability with better URL handling
