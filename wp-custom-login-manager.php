@@ -2,9 +2,8 @@
 /**
  * Plugin Name: WP Custom Login Manager
  * Plugin URI: https://github.com/NichlasB/wp-custom-login-manager
- * GitHub Plugin URI: https://github.com/NichlasB/wp-custom-login-manager
  * Description: A modern, secure custom login and registration system for WordPress with email verification.
- * Version: 1.1.6
+ * Version: 1.1.7
  * Requires at least: 5.0
  * Requires PHP: 7.2
  * Author: CueFox
@@ -12,6 +11,9 @@
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: wp-custom-login-manager
  * Domain Path: /languages
+ * 
+ * GitHub Repository: NichlasB/wp-custom-login-manager
+ * GitHub Branch: main
  *
  * @package WPCustomLoginManager
  */
@@ -21,19 +23,8 @@ if (!defined('ABSPATH')) {
     exit('Direct access not permitted.');
 }
 
-// Initialize GitHub Updater
-require_once plugin_dir_path(__FILE__) . 'updater.php';
-function initialize_wpclm_updater() {
-    new WP_GitHub_Updater([
-        'slug' => 'wp-custom-login-manager',
-        'github_url' => 'https://github.com/NichlasB/wp-custom-login-manager',
-        'version' => WPCLM_VERSION
-    ]);
-}
-add_action('init', 'initialize_wpclm_updater');
-
 // Plugin constants
-define('WPCLM_VERSION', '1.1.6');
+define('WPCLM_VERSION', '1.1.7');
 define('WPCLM_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('WPCLM_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('WPCLM_PLUGIN_BASENAME', plugin_basename(__FILE__));
@@ -190,6 +181,10 @@ public function init_components() {
      * Plugin deactivation
      */
     public function deactivate() {
+        // Remove all plugin actions and filters before deactivation
+        remove_action('init', array(WPCLM_Redirects::get_instance(), 'handle_early_redirect'), 1);
+        remove_action('init', array($this, 'init_components'), 10);
+        
         // Flush rewrite rules
         flush_rewrite_rules();
     }

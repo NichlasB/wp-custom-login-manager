@@ -30,8 +30,10 @@ class WPCLM_Redirects {
      * Constructor
      */
     private function __construct() {
-        // Add early redirect handler
-        add_action('init', array($this, 'handle_early_redirect'), 1);
+        if (!isset($_GET['action']) || $_GET['action'] !== 'deactivate') {
+            // Only add redirect handler if we're not deactivating
+            add_action('init', array($this, 'handle_early_redirect'), 1);
+        }
     }
 
     /**
