@@ -25,13 +25,17 @@ if (!class_exists('WP_GitHub_Updater')) {
 
         private function set_defaults() {
             if (empty($this->api_url)) {
+                $path = trim(parse_url($this->github_url, PHP_URL_PATH), '/');
+                list($username, $repo) = explode('/', $path);
                 $this->api_url = sprintf('https://api.github.com/repos/%s/%s/releases/latest',
-                    parse_url($this->github_url, PHP_URL_PATH)
+                    $username,
+                    $repo
                 );
             }
             if (empty($this->zip_url)) {
+                $path = trim(parse_url($this->github_url, PHP_URL_PATH), '/');
                 $this->zip_url = sprintf('https://github.com/%s/archive/refs/tags/',
-                    parse_url($this->github_url, PHP_URL_PATH)
+                    $path
                 );
             }
         }

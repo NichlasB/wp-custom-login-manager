@@ -3,7 +3,7 @@
  * Plugin Name: WP Custom Login Manager
  * Plugin URI: 
  * Description: A modern, secure custom login and registration system for WordPress with email verification.
- * Version: 1.1.5
+ * Version: 1.1.6
  * Requires at least: 5.0
  * Requires PHP: 7.2
  * Author: CueFox

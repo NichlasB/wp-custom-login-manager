@@ -98,6 +98,10 @@ This project is licensed under the GPL v2 or later - see the LICENSE file for de
 
 ## Changelog
 
+### 1.1.6
+* Fixed and optimized GitHub-based update system
+* Improved update reliability with better URL handling
+
 ### 1.1.5
 * Replaced plugin update checker with custom GitHub updater implementation
 * Removed Composer dependencies for a lighter plugin footprint
