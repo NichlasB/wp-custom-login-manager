@@ -9,7 +9,7 @@ fi
 
 # Update version in main plugin file
 sed -i "s/Version: .*$/Version: $VERSION/" wp-custom-login-manager.php
-sed -i "s/define( 'WPCLM_VERSION'.*$/define( 'WPCLM_VERSION', '$VERSION' );/" wp-custom-login-manager.php
+sed -i "s/define('WPCLM_VERSION'.*$/define('WPCLM_VERSION', '$VERSION');/" wp-custom-login-manager.php
 
 # Update readme.txt
 sed -i "s/Stable tag: .*$/Stable tag: $VERSION/" readme.txt
