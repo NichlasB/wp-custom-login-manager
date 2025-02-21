@@ -374,6 +374,11 @@ public function get_image_url($option_name, $default_type) {
             'default' => '/contact/',
             'sanitize_callback' => 'esc_url_raw'
         ));
+        register_setting('wpclm_security_settings', 'wpclm_show_contact_help', array(
+            'type' => 'boolean',
+            'default' => false,
+            'sanitize_callback' => 'rest_sanitize_boolean'
+        ));
         register_setting('wpclm_security_settings', 'wpclm_allow_role_emails', array(
             'type' => 'boolean',
             'default' => false,
@@ -1099,6 +1104,19 @@ private function render_security_settings() {
                     class="regular-text">
                     <p class="description">
                         <?php _e('Enter the URL for the contact link shown in error messages. Can be absolute (https://example.com/contact) or relative (/contact/)', 'wp-custom-login-manager'); ?>
+                    </p>
+                </td>
+            </tr>
+            <tr>
+            <th scope="row"><?php _e('Show Contact Help Message', 'wp-custom-login-manager'); ?></th>
+                <td>
+                    <label>
+                        <input type="checkbox" name="wpclm_show_contact_help" 
+                            value="1" <?php checked(get_option('wpclm_show_contact_help', false)); ?>>
+                        <?php _e('Show "If you need help creating an account, contact us" message', 'wp-custom-login-manager'); ?>
+                    </label>
+                    <p class="description">
+                        <?php _e('When enabled, error messages will include a link to contact support for help.', 'wp-custom-login-manager'); ?>
                     </p>
                 </td>
             </tr>

@@ -3,7 +3,7 @@ Contributors: Alynt
 Tags: login, registration, custom login, user registration, authentication, email verification
 Requires at least: 5.0
 Tested up to: 6.7.1
-Stable tag: 1.1.3
+Stable tag: 1.1.4
 Requires PHP: 7.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -102,6 +102,10 @@ To contribute a translation, please visit the plugin's WordPress.org repository.
 
 == Changelog ==
 
+= 1.1.4 =
+* Added option to disable the "If you need help creating an account, contact us" message in error messages
+* The contact help message is now disabled by default on new installations
+
 = 1.1.3 =
 * Fixed role-based email detection to handle both API status and flag
 * Fixed role-based email validation to properly respect allow setting
@@ -144,6 +148,12 @@ To contribute a translation, please visit the plugin's WordPress.org repository.
 * Enhanced security features
 
 == Upgrade Notice ==
+
+= 1.1.4 =
+New setting to control visibility of contact help message in error messages. The message is now disabled by default on new installations but existing installations will keep their current setting.
+
+= 1.1.3 =
+This version adds two new security settings: configurable contact URL and role-based email toggle. After updating, visit WP Admin > Custom Login > Security Settings to configure these options. Role-based emails remain disabled by default for security.
 
 = 1.1.1 =
 This update fixes an important issue with error message display during password resets. If you're using the password reset functionality with Turnstile verification, we recommend updating.

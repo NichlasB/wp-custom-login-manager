@@ -191,6 +191,10 @@ class WPCLM_Email_Verifier {
      * @return string Formatted message with contact link
      */
     private function format_error_message($message) {
+        if (!get_option('wpclm_show_contact_help', false)) {
+            return $message;
+        }
+        
         $contact_url = get_option('wpclm_contact_url', '/contact/');
         return sprintf(
             '%s %s',

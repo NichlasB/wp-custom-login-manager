@@ -98,6 +98,10 @@ This project is licensed under the GPL v2 or later - see the LICENSE file for de
 
 ## Changelog
 
+### 1.1.4
+- Added option to disable the "If you need help creating an account, contact us" message in error messages
+- The contact help message is now disabled by default on new installations
+
 ### 1.1.3
 * Fixed role-based email detection to handle both API status and flag
 * Fixed role-based email validation to properly respect allow setting
