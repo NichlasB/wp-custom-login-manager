@@ -102,6 +102,11 @@ To contribute a translation, please visit the plugin's WordPress.org repository.
 
 == Changelog ==
 
+= 1.1.5 =
+* Replaced plugin update checker with custom GitHub updater implementation
+* Removed Composer dependencies for a lighter plugin footprint
+* Improved update process reliability
+
 = 1.1.4 =
 * Added option to disable the "If you need help creating an account, contact us" message in error messages
 * The contact help message is now disabled by default on new installations

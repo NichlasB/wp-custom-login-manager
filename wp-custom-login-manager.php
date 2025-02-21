@@ -3,7 +3,7 @@
  * Plugin Name: WP Custom Login Manager
  * Plugin URI: 
  * Description: A modern, secure custom login and registration system for WordPress with email verification.
- * Version: 1.1.4
+ * Version: 1.1.5
  * Requires at least: 5.0
  * Requires PHP: 7.2
  * Author: CueFox
@@ -20,41 +20,19 @@ if (!defined('ABSPATH')) {
     exit('Direct access not permitted.');
 }
 
-// Plugin Update Checker
-$composerAutoloaderPath = __DIR__ . '/vendor/autoload.php';
-$composerAutoloaderExists = false;
-
-// Check if any Composer autoloader is already loaded
-foreach (get_included_files() as $file) {
-    if (strpos($file, 'vendor/composer/autoload_real.php') !== false) {
-        $composerAutoloaderExists = true;
-        break;
-    }
+// Initialize GitHub Updater
+require_once plugin_dir_path(__FILE__) . 'updater.php';
+function initialize_wpclm_updater() {
+    new WP_GitHub_Updater([
+        'slug' => 'wp-custom-login-manager',
+        'github_url' => 'https://github.com/NichlasB/wp-custom-login-manager',
+        'version' => WPCLM_VERSION
+    ]);
 }
-
-// Only load our autoloader if no other Composer autoloader is loaded
-if (!$composerAutoloaderExists) {
-    require_once $composerAutoloaderPath;
-}
-
-use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
-
-if (class_exists('YahnisElsts\PluginUpdateChecker\v5\PucFactory')) {
-    $myUpdateChecker = PucFactory::buildUpdateChecker(
-        'https://github.com/NichlasB/wp-custom-login-manager/',
-        __FILE__,
-        'wp-custom-login-manager'
-    );
-
-    // Enable GitHub releases
-    $myUpdateChecker->getVcsApi()->enableReleaseAssets();
-    
-    // Set the branch that contains the stable release
-    $myUpdateChecker->setBranch('main');
-}
+add_action('init', 'initialize_wpclm_updater');
 
 // Plugin constants
-define('WPCLM_VERSION', '1.1.4');
+define('WPCLM_VERSION', '1.1.5');
 define('WPCLM_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('WPCLM_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('WPCLM_PLUGIN_BASENAME', plugin_basename(__FILE__));
