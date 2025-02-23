@@ -251,6 +251,19 @@ if ($pass1.length && $pass2.length) {
         
     };
 
-    // Initialize
-    WPCLM.init();
+    // Check for checkout redirect
+    jQuery(document).ready(function($) {
+        // Check if we have a checkout redirect message
+        if ($('.wpclm-checkout-redirect').length) {
+            // Hide the welcome message
+            $('.wpclm-welcome-message').hide();
+            
+            // Optionally, you can add some animation
+            $('.wpclm-message').fadeIn(300);
+        }
+    });
+
+// Initialize
+WPCLM.init();
+
 });
