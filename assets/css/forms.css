@@ -131,7 +131,7 @@ body.wpclm-template-page .wpclm-background {
     color: var(--wpclm-text-color, #4a5568);
     font-size: 1rem;
     margin-bottom: 2rem;
-    padding: 5px 10px;
+    padding: 10px;
 }
 
 .wpclm-form.password-setup-form h2 {
@@ -379,7 +379,7 @@ body.wpclm-template-page .wpclm-background {
     background-color: #f0f8f0;
     border: 1px solid #c3e6cb;
     color: #00a32a;
-    padding: 5px 10px;
+    padding: 10px;
 }
 
 .wpclm-message {
@@ -388,7 +388,7 @@ body.wpclm-template-page .wpclm-background {
     color: var(--wpclm-text-color, #4a5568);
     font-size: 1rem;
     margin-bottom: 2rem;
-    padding: 5px 10px;
+    padding: 10px;
 }
 
 .wpclm-message a {
@@ -405,6 +405,10 @@ body.wpclm-template-page .wpclm-background {
     background: #fffce3;
     border: 2px solid #c9bf6d;
     color: initial;
+}
+
+.wpclm-message p {
+    margin-bottom: 0
 }
 
 /* Error States */
