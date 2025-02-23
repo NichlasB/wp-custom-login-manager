@@ -98,6 +98,15 @@ This project is licensed under the GPL v2 or later - see the LICENSE file for de
 
 ## Changelog
 
+### 1.1.9 - 2025-02-23
+* Improved checkout redirect functionality for WooCommerce
+* Added special styling for checkout redirect messages
+* Enhanced login page UI for checkout redirects
+* Added JavaScript handling for checkout redirect scenarios
+* Fixed duplicate settings links in plugin actions
+* Resolved version number inconsistencies
+* Improved error handling for redirect scenarios
+
 ### 1.1.8
 - Documentation: Updated plugin description for clarity
 
