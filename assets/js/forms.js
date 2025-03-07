@@ -107,6 +107,37 @@ jQuery(document).ready(function($) {
                 return false;
             }
 
+            // Check if form has Turnstile and the token exists
+            if ($form.find('.cf-turnstile').length > 0) {
+                const turnstileResponse = $form.find('[name="cf-turnstile-response"]').val();
+                
+                // If the Turnstile widget exists but we don't have a response token
+                if (!turnstileResponse) {
+                    // This could happen if the widget didn't initialize properly
+                    // or if the token wasn't captured
+                    
+                    // Try to reset the Turnstile widget if available
+                    if (typeof turnstile !== 'undefined') {
+                        try {
+                            turnstile.reset();
+                        } catch (err) {
+                            console.error('Failed to reset Turnstile widget', err);
+                        }
+                    }
+                    
+                    // Show error to user
+                    const errorMessage = wpclm_forms.messages.security_verification_required || 'Please complete the security verification.';
+                    $form.prepend('<div class="wpclm-error-message" role="alert">' + errorMessage + '</div>');
+                    
+                    // Prevent form submission
+                    e.preventDefault();
+                    return false;
+                }
+                
+                // Log for debugging
+                console.log('Turnstile token found, proceeding with submission');
+            }
+
             // Add loading state
             $form.addClass('loading');
             $submitButton.prop('disabled', true)
@@ -135,10 +166,10 @@ jQuery(document).ready(function($) {
             }
 
             // Check password match and requirements if confirming password
-const $pass1 = $form.find('#pass1');
-const $pass2 = $form.find('#pass2');
-if ($pass1.length && $pass2.length) {
-    const password = $pass1.val();
+            const $pass1 = $form.find('#pass1');
+            const $pass2 = $form.find('#pass2');
+            if ($pass1.length && $pass2.length) {
+                const password = $pass1.val();
     
     // Check password requirements
     if (!WPCLM.validatePasswordRequirements(password)) {

@@ -3,7 +3,7 @@
  * Plugin Name: WP Custom Login Manager
  * Plugin URI: https://github.com/NichlasB/wp-custom-login-manager
  * Description: A modern, secure custom login and registration system for WordPress with email verification.
- * Version: 1.1.9
+ * Version: 1.2.0
  * Requires at least: 5.0
  * Requires PHP: 7.2
  * Author: CueFox
@@ -24,7 +24,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Plugin constants
-define('WPCLM_VERSION', '1.1.9');
+define('WPCLM_VERSION', '1.2.0');
 define('WPCLM_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('WPCLM_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('WPCLM_PLUGIN_BASENAME', plugin_basename(__FILE__));

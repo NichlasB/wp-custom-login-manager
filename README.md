@@ -98,6 +98,10 @@ This project is licensed under the GPL v2 or later - see the LICENSE file for de
 
 ## Changelog
 
+### 1.2.0 - 2025-03-07
+* Fixed: Turnstile widget now properly appears on login form when enabled in settings
+* Added: Improved debugging for Turnstile integration to help troubleshoot visibility issues
+
 ### 1.1.9 - 2025-02-23
 * Improved checkout redirect functionality for WooCommerce
 * Added special styling for checkout redirect messages

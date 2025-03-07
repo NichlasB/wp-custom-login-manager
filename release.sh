@@ -16,7 +16,7 @@ if [ -z "$PLUGIN_FILE" ]; then
 fi
 
 # Extract the plugin constant prefix from the file (e.g., ALYNT_GIT from ALYNT_GIT_VERSION)
-PREFIX=$(grep -o "[A-Z_]\+_VERSION" "$PLUGIN_FILE" | head -n 1 | sed 's/_VERSION//')
+PREFIX=$(grep -o "[A-Z_][A-Z0-9_]*_VERSION" "$PLUGIN_FILE" | head -n 1 | sed 's/_VERSION//')
 
 if [ -z "$PREFIX" ]; then
     echo "Error: Could not find version constant prefix"

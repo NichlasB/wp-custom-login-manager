@@ -3,7 +3,7 @@ Contributors: Alynt
 Tags: login, registration, custom login, user registration, authentication, email verification
 Requires at least: 5.0
 Tested up to: 6.7.2
-Stable tag: 1.1.9
+Stable tag: 1.2.0
 Requires PHP: 7.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -101,6 +101,19 @@ WP Custom Login Manager is translation-ready. To create a translation:
 To contribute a translation, please visit the plugin's WordPress.org repository.
 
 == Changelog ==
+
+= 1.2.0 =
+* Fixed: Turnstile widget now properly appears on login form when enabled in settings
+* Added: Improved debugging for Turnstile integration to help troubleshoot visibility issues
+
+= 1.1.9 =
+* Improved checkout redirect functionality for WooCommerce
+* Added special styling for checkout redirect messages
+* Enhanced login page UI for checkout redirects
+* Added JavaScript handling for checkout redirect scenarios
+* Fixed duplicate settings links in plugin actions
+* Resolved version number inconsistencies
+* Improved error handling for redirect scenarios
 
 = 1.1.8 =
 * Documentation: Updated plugin description for clarity

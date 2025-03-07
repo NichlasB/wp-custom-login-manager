@@ -387,8 +387,12 @@ public function enqueue_scripts() {
     // Enqueue Dashicons for password toggle
     wp_enqueue_style('dashicons');
 
-    // Add Turnstile script if enabled
-    if ($this->turnstile && $this->turnstile->is_enabled_for('login')) {
+    // Add Turnstile script if enabled for any form
+    if ($this->turnstile && (
+        $this->turnstile->is_enabled_for('login') || 
+        $this->turnstile->is_enabled_for('register') || 
+        $this->turnstile->is_enabled_for('reset')
+    )) {
         wp_enqueue_script(
             'cf-turnstile',
             'https://challenges.cloudflare.com/turnstile/v0/api.js',
@@ -514,6 +518,7 @@ public function enqueue_scripts() {
             'email' => __('Please enter a valid email address.', 'wp-custom-login-manager'),
             'password_match' => __('Passwords do not match.', 'wp-custom-login-manager'),
             'password_strength' => __('Password is too weak.', 'wp-custom-login-manager'),
+            'security_verification_required' => __('Please complete the security verification.', 'wp-custom-login-manager'),
         )
     ));
 
@@ -698,7 +703,7 @@ private function render_reset_password_form() {
             echo '</div>';
             ?>
             <div class="form-links">
-                <a href="<?php echo esc_url(remove_query_arg(array('action', 'key', 'login', 'error'))); ?>">
+                <a href="<?php echo esc_url(remove_query_arg(array('action', 'key', 'login', 'password'))); ?>">
                     <?php _e('Back to Login', 'wp-custom-login-manager'); ?>
                 </a>
             </div>
@@ -1686,8 +1691,39 @@ private function render_register_form() {
 
         // Verify Turnstile if enabled
         if ($this->turnstile && $this->turnstile->is_enabled_for('register')) {
+            // Add debug logging
+            if (class_exists('WPCLM_Debug') && WPCLM_Debug::get_instance()) {
+                WPCLM_Debug::get_instance()->log('Turnstile verification started for registration', [
+                    'POST data' => $this->sanitize_debug_data($_POST),
+                    'Has token' => isset($_POST['cf-turnstile-response']),
+                    'Token value' => isset($_POST['cf-turnstile-response']) ? substr($_POST['cf-turnstile-response'], 0, 10) . '...' : 'not set'
+                ], 'info');
+            }
+
             $turnstile_response = isset($_POST['cf-turnstile-response']) ? $_POST['cf-turnstile-response'] : '';
+            
+            // If token is missing but Turnstile is enabled
+            if (empty($turnstile_response)) {
+                if (class_exists('WPCLM_Debug') && WPCLM_Debug::get_instance()) {
+                    WPCLM_Debug::get_instance()->log('Turnstile token is missing', [], 'error');
+                }
+                $this->set_error_message($this->messages->get_message('security_verification_failed'));
+                wp_safe_redirect(add_query_arg(array(
+                    'action' => 'register'
+                ), home_url(get_option('wpclm_login_url', '/account-login/'))));
+                exit;
+            }
+            
             $turnstile_result = $this->turnstile->verify_token($turnstile_response);
+            
+            // Log the result
+            if (class_exists('WPCLM_Debug') && WPCLM_Debug::get_instance()) {
+                WPCLM_Debug::get_instance()->log('Turnstile verification result', [
+                    'is_wp_error' => is_wp_error($turnstile_result),
+                    'result' => is_wp_error($turnstile_result) ? $turnstile_result->get_error_message() : 'Success'
+                ], 'info');
+            }
+            
             if (is_wp_error($turnstile_result)) {
                 $this->set_error_message($turnstile_result->get_error_message());
                 wp_safe_redirect(add_query_arg(array(
@@ -1849,7 +1885,7 @@ private function render_register_form() {
         }
 
         // Verify Turnstile if enabled
-        if ($this->turnstile && $this->turnstile->is_enabled_for('login')) {
+        if ($this->turnstile && $this->turnstile->is_enabled_for('reset')) {
             $turnstile_response = isset($_POST['cf-turnstile-response']) ? $_POST['cf-turnstile-response'] : '';
             $turnstile_result = $this->turnstile->verify_token($turnstile_response);
             if (is_wp_error($turnstile_result)) {
@@ -1863,23 +1899,45 @@ private function render_register_form() {
 
         $user_login = isset($_POST['user_login']) ? sanitize_email($_POST['user_login']) : '';
         $login_url = home_url(get_option('wpclm_login_url', '/account-login/'));
+    
+        // Debug the incoming POST data
+        error_log('WPCLM Debug - Processing lost password form');
+        error_log('WPCLM Debug - POST data: ' . print_r($_POST, true));
+    
+        // Verify Turnstile first if enabled
+        if ($this->turnstile && $this->turnstile->is_enabled_for('reset')) {
+            $turnstile_response = isset($_POST['cf-turnstile-response']) ? $_POST['cf-turnstile-response'] : '';
+            $turnstile_result = $this->turnstile->verify_token($turnstile_response);
 
-        // Check rate limiting before processing password reset
-        $ip_address = $this->rate_limiter->get_client_ip();
-        $rate_check = $this->rate_limiter->check_rate_limit($ip_address);
+            if (is_wp_error($turnstile_result)) {
+                $error_message = $this->messages->get_message('security_verification_failed');
+                
+                // Store error in transient
+                $error_key = 'wpclm_reset_error_' . md5($turnstile_response);
+                set_transient($error_key, $error_message, 30);
+                
+                // Build redirect URL
+                $redirect_url = add_query_arg(array(
+                    'action' => 'lostpassword',
+                    'error_key' => $error_key
+                ), $login_url);
+                
+                wp_safe_redirect($redirect_url);
+                exit;
+            }
+        }
 
-        if (!$rate_check['allowed']) {
-            $error_message = sprintf(
-                __('Too many password reset attempts. Please try again in %d minutes and %d seconds.', 'wp-custom-login-manager'),
-                floor($rate_check['remaining_time'] / 60),
-                $rate_check['remaining_time'] % 60
-            );
+        // Then verify nonce
+        if (!isset($_POST['wpclm_lostpass_nonce']) || !wp_verify_nonce($_POST['wpclm_lostpass_nonce'], 'wpclm-lostpass-nonce')) {
             wp_safe_redirect(add_query_arg(array(
                 'action' => 'lostpassword',
-                'error' => urlencode($error_message)
+                'error' => urlencode($this->messages->get_message('invalid_nonce'))
             ), $login_url));
             exit;
         }
+
+        $user_login = isset($_POST['user_login']) ? sanitize_email($_POST['user_login']) : '';
+        $login_url = home_url(get_option('wpclm_login_url', '/account-login/'));
 
         if (empty($user_login)) {
             $error_message = $this->messages->get_message('required_fields');
