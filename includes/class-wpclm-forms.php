@@ -118,12 +118,19 @@ class WPCLM_Forms {
      * Clear existing messages
      */
     private function clear_messages() {
-        if (isset($_SESSION['wpclm_error_message'])) {
-            unset($_SESSION['wpclm_error_message']);
+        $cookie_name = 'wpclm_user_' . md5(isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : 'unknown');
+        
+        // Clear cookies if they exist
+        if (isset($_COOKIE['wpclm_error_message'])) {
+            setcookie('wpclm_error_message', '', time() - 3600, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
         }
-        if (isset($_SESSION['wpclm_success_message'])) {
-            unset($_SESSION['wpclm_success_message']);
+        if (isset($_COOKIE['wpclm_success_message'])) {
+            setcookie('wpclm_success_message', '', time() - 3600, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
         }
+        
+        // Also delete transients
+        delete_transient('wpclm_error_' . $cookie_name);
+        delete_transient('wpclm_success_' . $cookie_name);
     }
 
     /**
@@ -131,7 +138,12 @@ class WPCLM_Forms {
      */
     private function set_error_message($message) {
         $this->clear_messages();
-        $_SESSION['wpclm_error_message'] = $message;
+        $cookie_name = 'wpclm_user_' . md5(isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : 'unknown');
+        
+        // Store in cookie (with limited content) and full message in transient
+        $cookie_value = substr(base64_encode($message), 0, 80); // Limited version for cookie
+        setcookie('wpclm_error_message', $cookie_value, time() + 300, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
+        set_transient('wpclm_error_' . $cookie_name, $message, 300); // 5 minutes
     }
 
     /**
@@ -139,7 +151,12 @@ class WPCLM_Forms {
      */
     private function set_success_message($message) {
         $this->clear_messages();
-        $_SESSION['wpclm_success_message'] = $message;
+        $cookie_name = 'wpclm_user_' . md5(isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : 'unknown');
+        
+        // Store in cookie (with limited content) and full message in transient
+        $cookie_value = substr(base64_encode($message), 0, 80); // Limited version for cookie
+        setcookie('wpclm_success_message', $cookie_value, time() + 300, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
+        set_transient('wpclm_success_' . $cookie_name, $message, 300); // 5 minutes
     }
 
     /**
@@ -157,44 +174,55 @@ class WPCLM_Forms {
         // Initialize Email Verifier instance
         $this->email_verifier = WPCLM_Email_Verifier::get_instance();
 
-        // Initialize Turnstile instance
-        $this->turnstile = new WPCLM_Turnstile();
-
-        // Add session handling
-        add_action('init', function() {
-            if (!session_id()) {
-                session_start();
+        // Initialize Turnstile if available
+        if (class_exists('WPCLM_Turnstile')) {
+            $this->turnstile = WPCLM_Turnstile::get_instance();
+        }
+        
+        // Clear message cookies on logout
+        add_action('wp_logout', function() {
+            $cookie_name = 'wpclm_user_' . md5(isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : 'unknown');
+            
+            // Clear cookies if they exist
+            if (isset($_COOKIE['wpclm_error_message'])) {
+                setcookie('wpclm_error_message', '', time() - 3600, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
             }
+            if (isset($_COOKIE['wpclm_success_message'])) {
+                setcookie('wpclm_success_message', '', time() - 3600, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
+            }
+            
+            delete_transient('wpclm_error_' . $cookie_name);
+            delete_transient('wpclm_success_' . $cookie_name);
         });
 
-        add_action('template_redirect', array($this, 'redirect_logged_in_users'), 1);
+        add_action('init', array($this, 'maybe_redirect_login_page'));
+
+        // Modify wp_login_url filter
+        add_filter('login_url', array($this, 'get_login_page_url'), 10, 3);
+
+        // Handle logout redirect
         add_action('wp_logout', array($this, 'handle_logout_redirect'));
 
-        // Replace default login page - using earlier hooks
-        add_action('plugins_loaded', array($this, 'init_login_hooks'));
+        // Modify login redirection
+        add_filter('login_redirect', array($this, 'check_auth_redirect'), 10, 3);
 
-        // Authentication hooks
-        add_action('init', function() {
-            add_filter('authenticate', array($this, 'check_auth_redirect'), 1, 1);
-            add_action('wp_logout', array($this, 'force_login_redirect'));
-            add_action('admin_init', array($this, 'check_admin_access'));
-        }, 1);
+        // Protect admin access
+        add_action('admin_init', array($this, 'check_admin_access'));
 
-        // Filter template redirect for protected pages
+        // Modify links to login page
+        add_filter('site_url', array($this, 'filter_login_url'), 10, 4);
+        
+        // Add protection for specific paths
         add_action('template_redirect', function() {
-            // Don't redirect if user is logged in or if we're already on the login page
             if (is_user_logged_in() || $this->is_login_url()) {
                 return;
             }
-
-            // Check if current page requires authentication
-            $protected_paths = apply_filters('wpclm_protected_paths', array(
-                'my-account'
-            ));
-
+            
             $current_path = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
             $path_segments = explode('/', $current_path);
-
+            
+            $protected_paths = apply_filters('wpclm_protected_paths', array('my-account'));
+            
             foreach ($protected_paths as $protected_path) {
                 if (in_array($protected_path, $path_segments)) {
                     $login_url = home_url(get_option('wpclm_login_url', '/account-login/'));
@@ -395,11 +423,20 @@ public function enqueue_scripts() {
     )) {
         wp_enqueue_script(
             'cf-turnstile',
-            'https://challenges.cloudflare.com/turnstile/v0/api.js',
+            'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileReady',
             array(),
             null,
             true
         );
+        
+        // Add inline script to handle Turnstile ready event
+        wp_add_inline_script('cf-turnstile', "
+            function onTurnstileReady() {
+                // Dispatch custom event when Turnstile is ready
+                window.dispatchEvent(new Event('turnstile_ready'));
+                console.log('Turnstile is ready');
+            }
+        ");
     }
 
     // Add body class fix for admin bar
@@ -925,6 +962,8 @@ private function is_login_page() {
     }
     
     if ($this->is_login_url()) {
+        // Prevent caching of login page to avoid stale nonce issues
+        nocache_headers();
         // Redirect to login page if registrations are disabled and user tries to register
         if (isset($_GET['action']) && $_GET['action'] === 'register' && get_option('wpclm_disable_registration', 0)) {
             $login_url = home_url($this->escape_output(get_option('wpclm_login_url', '/account-login/'), 'url'));
@@ -1017,10 +1056,29 @@ public function update_login_url($new_url) {
 
         // Check if we're on the login page
         $current_path = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
-        $login_path = trim(get_option('wpclm_login_url', '/account-login/'), '/');
+
+        // Filter template redirect for protected pages
+        add_action('template_redirect', function() use ($current_path) {
+            // Don't redirect if user is logged in or if we're already on the login page
+            if (is_user_logged_in() || $this->is_login_url()) {
+                return;
+            }
+
+            // Check if current page requires authentication
+            $protected_paths = apply_filters('wpclm_protected_paths', array(
+                'my-account'
+            ));
+
+            // If current page is protected, redirect to login page
+            if (in_array($current_path, $protected_paths)) {
+                $login_url = home_url($this->get_login_path());
+                wp_safe_redirect($login_url);
+                exit;
+            }
+        });
 
         // If user is logged in and on login page, redirect
-        if (is_user_logged_in() && $current_path === $login_path) {
+        if (is_user_logged_in() && $current_path === trim(get_option('wpclm_login_url', '/account-login/'), '/')) {
 
             // Get redirect URL from settings or use default
             $redirect_url = get_option('wpclm_logged_in_redirect', home_url('/my-account/'));
@@ -1309,12 +1367,6 @@ public function update_login_url($new_url) {
                 </span>
             </div>
 
-            <?php
-                if ($this->turnstile && $this->turnstile->is_enabled_for('login')) {
-                    $this->turnstile->render_widget();
-            }
-            ?>
-
             <div class="form-field submit-button">
                 <button type="submit" 
                 class="wpclm-button"
@@ -1370,14 +1422,33 @@ private function render_register_form() {
 
     <div class="wpclm-form wpclm-register-form register-form">
         <?php
-        // Display error message if present in session
-        $error_message = isset($_SESSION['wpclm_error_message']) ? $_SESSION['wpclm_error_message'] : '';
+        // Display error message from cookie/transient
+        $cookie_name = 'wpclm_user_' . md5(isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : 'unknown');
+        $error_message = '';
+        
+        if (isset($_COOKIE['wpclm_error_message'])) {
+            // Get full message from transient
+            $error_message = get_transient('wpclm_error_' . $cookie_name);
+            // Clear the cookie after reading
+            setcookie('wpclm_error_message', '', time() - 3600, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
+            delete_transient('wpclm_error_' . $cookie_name);
+        }
+        
         if (!empty($error_message)) {
             echo $this->render_error_message($error_message);
         }
 
-        // Display success message if present in session
-        $success_message = isset($_SESSION['wpclm_success_message']) ? $_SESSION['wpclm_success_message'] : '';
+        // Display success message from cookie/transient
+        $success_message = '';
+        
+        if (isset($_COOKIE['wpclm_success_message'])) {
+            // Get full message from transient
+            $success_message = get_transient('wpclm_success_' . $cookie_name);
+            // Clear the cookie after reading
+            setcookie('wpclm_success_message', '', time() - 3600, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
+            delete_transient('wpclm_success_' . $cookie_name);
+        }
+        
         if (!empty($success_message)) {
             echo $this->render_success_message($success_message);
         }
@@ -1577,17 +1648,8 @@ private function render_register_form() {
             exit;
         }
 
-        // Verify Turnstile if enabled
-        if ($this->turnstile && $this->turnstile->is_enabled_for('login')) {
-            $turnstile_response = isset($_POST['cf-turnstile-response']) ? $_POST['cf-turnstile-response'] : '';
-            $turnstile_result = $this->turnstile->verify_token($turnstile_response);
-            if (is_wp_error($turnstile_result)) {
-                wp_safe_redirect(add_query_arg(array(
-                    'login_error' => urlencode($turnstile_result->get_error_message())
-                )));
-                exit;
-            }
-        }
+        // Turnstile verification is disabled for login forms
+        // We've hardcoded is_enabled_for('login') to always return false in the Turnstile class
 
         // Check rate limiting before processing login
         $ip_address = $this->rate_limiter->get_client_ip();
@@ -1618,19 +1680,6 @@ private function render_register_form() {
                     $rate_check['remaining_attempts']
                 );
             }
-            wp_safe_redirect(add_query_arg('login_error', urlencode($error_message)));
-            exit;
-        }
-
-        $creds = array(
-            'user_login'    => isset($_POST['user_login']) ? sanitize_email($_POST['user_login']) : '',
-            'user_password' => isset($_POST['user_pass']) ? $_POST['user_pass'] : '',
-            'remember'      => isset($_POST['rememberme'])
-        );
-
-        // Validate required fields
-        if (empty($creds['user_login']) || empty($creds['user_password'])) {
-            $error_message = $this->messages->get_message('required_fields');
             wp_safe_redirect(add_query_arg('login_error', urlencode($error_message)));
             exit;
         }
@@ -1735,29 +1784,42 @@ private function render_register_form() {
 
         // Verify email if enabled
         if ($this->email_verifier && get_option('wpclm_email_verification_enabled')) {
-            error_log('WPCLM Email Verification: Starting verification');
-            error_log('WPCLM Email Verification Enabled: ' . (get_option('wpclm_email_verification_enabled') ? 'Yes' : 'No'));
-            error_log('WPCLM Email Verifier Instance: ' . ($this->email_verifier ? 'Yes' : 'No'));
+            // Use debug class if available, otherwise fallback to error_log
+            if (class_exists('WPCLM_Debug') && WPCLM_Debug::get_instance()) {
+                $debug = WPCLM_Debug::get_instance();
+                $debug->log('Email verification started for registration', [
+                    'Email' => isset($_POST['user_email']) ? sanitize_email($_POST['user_email']) : '',
+                    'Verification Enabled' => get_option('wpclm_email_verification_enabled') ? 'Yes' : 'No'
+                ], 'info');
+            }
             
-            error_log('WPCLM Registration POST data: ' . print_r($_POST, true));
             $email = isset($_POST['user_email']) ? sanitize_email($_POST['user_email']) : '';
-            error_log('WPCLM Email from POST: ' . $email);
-            error_log('WPCLM Email to verify: ' . $email);
-            
             $email_result = $this->email_verifier->verify_email($email);
+            
             if (is_wp_error($email_result)) {
-                error_log('WPCLM Email Verification Error: ' . $email_result->get_error_message());
+                if (class_exists('WPCLM_Debug') && WPCLM_Debug::get_instance()) {
+                    WPCLM_Debug::get_instance()->log('Email verification failed', [
+                        'Error' => $email_result->get_error_message()
+                    ], 'error');
+                }
+                
                 $this->set_error_message($email_result->get_error_message());
                 wp_safe_redirect(add_query_arg(array(
                     'action' => 'register'
                 ), home_url(get_option('wpclm_login_url', '/account-login/'))));
                 exit;
             }
-            error_log('WPCLM Email Verification: Completed successfully');
+            
+            if (class_exists('WPCLM_Debug') && WPCLM_Debug::get_instance()) {
+                WPCLM_Debug::get_instance()->log('Email verification completed successfully', [], 'info');
+            }
         } else {
-            error_log('WPCLM Email Verification: Skipped - Feature not enabled or verifier not initialized');
-            error_log('Email Verification Enabled: ' . (get_option('wpclm_email_verification_enabled') ? 'Yes' : 'No'));
-            error_log('Email Verifier Instance: ' . ($this->email_verifier ? 'Yes' : 'No'));
+            if (class_exists('WPCLM_Debug') && WPCLM_Debug::get_instance()) {
+                WPCLM_Debug::get_instance()->log('Email verification skipped', [
+                    'Verification Enabled' => get_option('wpclm_email_verification_enabled') ? 'Yes' : 'No',
+                    'Verifier Initialized' => $this->email_verifier ? 'Yes' : 'No'
+                ], 'info');
+            }
         }
 
         // Check rate limiting before processing registration
@@ -1876,6 +1938,36 @@ private function render_register_form() {
     * Process lost password form
     */
     private function process_lost_password() {
+        $login_url = home_url(get_option('wpclm_login_url', '/account-login/'));
+        
+        // Debug the incoming POST data
+        error_log('WPCLM Debug - Processing lost password form');
+        error_log('WPCLM Debug - POST data: ' . print_r($_POST, true));
+        
+        // Verify Turnstile if enabled
+        if ($this->turnstile && $this->turnstile->is_enabled_for('reset')) {
+            error_log('WPCLM Debug - Turnstile is enabled for reset form');
+            $turnstile_response = isset($_POST['cf-turnstile-response']) ? $_POST['cf-turnstile-response'] : '';
+            
+            error_log('WPCLM Debug - Turnstile response: ' . (empty($turnstile_response) ? 'EMPTY' : substr($turnstile_response, 0, 10) . '...'));
+            
+            $turnstile_result = $this->turnstile->verify_token($turnstile_response);
+
+            if (is_wp_error($turnstile_result)) {
+                error_log('WPCLM Debug - Turnstile verification failed: ' . $turnstile_result->get_error_message());
+                $error_message = $this->messages->get_message('security_verification_failed');
+                
+                wp_safe_redirect(add_query_arg(array(
+                    'action' => 'lostpassword',
+                    'login_error' => urlencode($error_message)
+                ), $login_url));
+                exit;
+            }
+            
+            error_log('WPCLM Debug - Turnstile verification successful');
+        }
+        
+        // Verify nonce
         if (!isset($_POST['wpclm_lostpass_nonce']) || !wp_verify_nonce($_POST['wpclm_lostpass_nonce'], 'wpclm-lostpass-nonce')) {
             wp_safe_redirect(add_query_arg(array(
                 'action' => 'lostpassword',
@@ -1884,64 +1976,11 @@ private function render_register_form() {
             exit;
         }
 
-        // Verify Turnstile if enabled
-        if ($this->turnstile && $this->turnstile->is_enabled_for('reset')) {
-            $turnstile_response = isset($_POST['cf-turnstile-response']) ? $_POST['cf-turnstile-response'] : '';
-            $turnstile_result = $this->turnstile->verify_token($turnstile_response);
-            if (is_wp_error($turnstile_result)) {
-                wp_safe_redirect(add_query_arg(array(
-                    'action' => 'lostpassword',
-                    'login_error' => urlencode($turnstile_result->get_error_message())
-                ), $login_url));
-                exit;
-            }
-        }
-
         $user_login = isset($_POST['user_login']) ? sanitize_email($_POST['user_login']) : '';
-        $login_url = home_url(get_option('wpclm_login_url', '/account-login/'));
-    
-        // Debug the incoming POST data
-        error_log('WPCLM Debug - Processing lost password form');
-        error_log('WPCLM Debug - POST data: ' . print_r($_POST, true));
-    
-        // Verify Turnstile first if enabled
-        if ($this->turnstile && $this->turnstile->is_enabled_for('reset')) {
-            $turnstile_response = isset($_POST['cf-turnstile-response']) ? $_POST['cf-turnstile-response'] : '';
-            $turnstile_result = $this->turnstile->verify_token($turnstile_response);
-
-            if (is_wp_error($turnstile_result)) {
-                $error_message = $this->messages->get_message('security_verification_failed');
-                
-                // Store error in transient
-                $error_key = 'wpclm_reset_error_' . md5($turnstile_response);
-                set_transient($error_key, $error_message, 30);
-                
-                // Build redirect URL
-                $redirect_url = add_query_arg(array(
-                    'action' => 'lostpassword',
-                    'error_key' => $error_key
-                ), $login_url);
-                
-                wp_safe_redirect($redirect_url);
-                exit;
-            }
-        }
-
-        // Then verify nonce
-        if (!isset($_POST['wpclm_lostpass_nonce']) || !wp_verify_nonce($_POST['wpclm_lostpass_nonce'], 'wpclm-lostpass-nonce')) {
-            wp_safe_redirect(add_query_arg(array(
-                'action' => 'lostpassword',
-                'error' => urlencode($this->messages->get_message('invalid_nonce'))
-            ), $login_url));
-            exit;
-        }
-
-        $user_login = isset($_POST['user_login']) ? sanitize_email($_POST['user_login']) : '';
-        $login_url = home_url(get_option('wpclm_login_url', '/account-login/'));
 
         if (empty($user_login)) {
             $error_message = $this->messages->get_message('required_fields');
-            if ($rate_check['remaining_attempts'] < get_option('wpclm_rate_limit_max_attempts')) {
+            if (isset($rate_check) && isset($rate_check['remaining_attempts']) && $rate_check['remaining_attempts'] < get_option('wpclm_rate_limit_max_attempts')) {
                 $error_message .= ' ' . sprintf(
                     __('You have %d attempts remaining.', 'wp-custom-login-manager'),
                     $rate_check['remaining_attempts']
@@ -1949,7 +1988,7 @@ private function render_register_form() {
             }
             wp_safe_redirect(add_query_arg(array(
                 'action' => 'lostpassword',
-                'error' => urlencode($error_message)
+                'login_error' => urlencode($error_message)
             ), $login_url));
             exit;
         }

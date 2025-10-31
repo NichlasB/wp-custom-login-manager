@@ -1032,23 +1032,21 @@ private function render_security_settings() {
             </td>
         </tr>
         <tr>
-            <th scope="row"><?php _e('Enable On Forms', 'wp-custom-login-manager'); ?></th>
+            <th scope="row"><?php _e('Enable On Form', 'wp-custom-login-manager'); ?></th>
             <td>
                 <?php
-                $enabled_forms = get_option('wpclm_turnstile_forms', array('register'));
-                $form_options = array(
-                    'register' => __('Registration Form', 'wp-custom-login-manager'),
-                    'login' => __('Login Form', 'wp-custom-login-manager'),
-                    'reset' => __('Password Reset Form', 'wp-custom-login-manager')
-                );
-                foreach ($form_options as $value => $label) : ?>
-                    <label style="display: block; margin-bottom: 5px;">
-                        <input type="checkbox" name="wpclm_turnstile_forms[]" 
-                            value="<?php echo esc_attr($value); ?>"
-                            <?php checked(in_array($value, $enabled_forms)); ?>>
-                        <?php echo esc_html($label); ?>
-                    </label>
-                <?php endforeach; ?>
+                // Force only registration form to have Turnstile
+                $enabled_forms = array('register');
+                update_option('wpclm_turnstile_forms', $enabled_forms);
+                ?>
+                <label style="display: block; margin-bottom: 5px;">
+                    <input type="checkbox" name="wpclm_turnstile_forms[]" 
+                        value="register" checked disabled>
+                    <?php echo esc_html(__('Registration Form', 'wp-custom-login-manager')); ?>
+                </label>
+                <p class="description">
+                    <?php _e('Turnstile is only enabled on the registration form for security purposes.', 'wp-custom-login-manager'); ?>
+                </p>
             </td>
         </tr>
 

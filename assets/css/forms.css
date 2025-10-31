@@ -285,13 +285,19 @@ body.wpclm-template-page .wpclm-background {
     justify-content: center;
     gap: 8px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
-    margin: 1rem 0;
+    transition: background-color 0.2s ease;
 }
 
 .wpclm-button:hover {
-    background-color: #005177;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+    background-color: #005f8b;
+    cursor: pointer;
+}
+
+.wpclm-button-disabled,
+.wpclm-button[disabled] {
+    background-color: #a7a7a7 !important;
+    cursor: not-allowed !important;
+    opacity: 0.7;
 }
 
 .wpclm-button-icon {
@@ -657,4 +663,20 @@ a:focus {
 
 .password-requirements li.valid .check {
     color: #28a745;
+}
+
+/* Turnstile Styles */
+.cf-turnstile {
+    margin: 1.5rem 0;
+}
+
+.wpclm-turnstile-loading {
+    background-color: #f0f9ff;
+    border: 1px solid #bae6fd;
+    color: #0369a1;
+    padding: 0.75rem;
+    margin: 0.5rem 0 1.5rem;
+    border-radius: 4px;
+    text-align: center;
+    font-size: 0.9rem;
 }
