@@ -72,8 +72,8 @@ class WP_Custom_Login_Manager {
     * Initialize plugin
     */
     public function init() {
-        // Load text domain first
-        $this->load_textdomain();
+        // Load text domain early on init
+        add_action('init', array($this, 'load_textdomain'), 5);
 
         // Include required files
         $this->include_files();
@@ -84,56 +84,72 @@ class WP_Custom_Login_Manager {
         // Register activation/deactivation hooks
         register_activation_hook(__FILE__, array($this, 'activate'));
         register_deactivation_hook(__FILE__, array($this, 'deactivate'));
-
     }
 
-/**
- * Load plugin text domain
- */
-private function load_textdomain() {
-    add_action('init', function() {
+    /**
+     * Load plugin text domain
+     */
+    public function load_textdomain() {
         load_plugin_textdomain(
             'wp-custom-login-manager',
             false,
             dirname(WPCLM_PLUGIN_BASENAME) . '/languages'
         );
-    }, 5); // Lower priority to ensure it loads early in init
-}
-
-/**
- * Include required files
- */
-private function include_files() {
-    require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-debug.php';
-    require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-settings.php';
-    require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-messages.php';
-    require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-rate-limiter.php';
-    require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-email-verifier.php';
-    require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-turnstile.php';
-    require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-forms.php';
-    require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-auth.php';
-    require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-redirects.php';
-    require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-emails.php';
-    require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-woocommerce.php';
-}
-
-/**
- * Initialize components
- */
-public function init_components() {
-    $this->settings = WPCLM_Settings::get_instance();
-    $this->messages = WPCLM_Messages::get_instance();
-    $this->rate_limiter = WPCLM_Rate_Limiter::get_instance();
-    $this->forms = WPCLM_Forms::get_instance();
-    $this->auth = WPCLM_Auth::get_instance();
-    $this->emails = WPCLM_Emails::get_instance();
-    $this->debug = WPCLM_Debug::get_instance();
-    
-    // Initialize WooCommerce integration if WooCommerce is active
-    if (class_exists('WooCommerce')) {
-        $this->woocommerce = WPCLM_WooCommerce::get_instance();
     }
-}
+
+    /**
+     * Include required files
+     */
+    private function include_files() {
+        // Core utilities (always needed)
+        require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-debug.php';
+        require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-messages.php';
+        require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-rate-limiter.php';
+        require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-email-verifier.php';
+        require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-turnstile.php';
+
+        // Admin-only: Settings page renderer (WPCLM_Settings needed on frontend for logo/background)
+        if (is_admin()) {
+            require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-settings-renderer.php';
+        }
+        require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-settings.php';
+
+        // Auth and email handling
+        require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-auth.php';
+        require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-emails.php';
+
+        // Form components (loaded before facade)
+        require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-login-router.php';
+        require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-frontend-assets.php';
+        require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-access-control.php';
+        require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-form-submission-handler.php';
+        require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-login-page-renderer.php';
+
+        // Forms facade (coordinates form components)
+        require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-forms.php';
+
+        // Redirects and integrations
+        require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-redirects.php';
+        require_once WPCLM_PLUGIN_DIR . 'includes/class-wpclm-woocommerce.php';
+    }
+
+    /**
+     * Initialize components
+     */
+    public function init_components() {
+        $this->settings = WPCLM_Settings::get_instance();
+        $this->messages = WPCLM_Messages::get_instance();
+        $this->rate_limiter = WPCLM_Rate_Limiter::get_instance();
+        $this->forms = WPCLM_Forms::get_instance();
+        $this->auth = WPCLM_Auth::get_instance();
+        $this->emails = WPCLM_Emails::get_instance();
+        $this->debug = WPCLM_Debug::get_instance();
+
+        // Initialize WooCommerce integration if WooCommerce is active
+        if (class_exists('WooCommerce')) {
+            $this->woocommerce = WPCLM_WooCommerce::get_instance();
+        }
+    }
 
     /**
  * Get asset URL
@@ -158,8 +174,11 @@ public function init_components() {
 
     /**
      * Plugin activation
+     * M6 Fix: Handle network activation for multisite
+     * 
+     * @param bool $network_wide Whether the plugin is being activated network-wide
      */
-    public function activate() {
+    public function activate($network_wide = false) {
         // Check WordPress version
         if (version_compare(get_bloginfo('version'), '5.0', '<')) {
             deactivate_plugins(plugin_basename(__FILE__));
@@ -170,6 +189,23 @@ public function init_components() {
             );
         }
 
+        // M6 Fix: Handle multisite network activation
+        if (is_multisite() && $network_wide) {
+            $sites = get_sites(array('fields' => 'ids', 'number' => 0));
+            foreach ($sites as $site_id) {
+                switch_to_blog($site_id);
+                $this->activate_single_site();
+                restore_current_blog();
+            }
+        } else {
+            $this->activate_single_site();
+        }
+    }
+    
+    /**
+     * Activate plugin for a single site
+     */
+    private function activate_single_site() {
         // Create default options
         $this->create_default_options();
 
@@ -195,10 +231,7 @@ public function init_components() {
     private function create_default_options() {
         $default_options = array(
             'wpclm_disable_registration' => 0,
-            'wpclm_welcome_text' => __('Welcome back!', 'wp-custom-login-manager'),
             'wpclm_default_role' => 'subscriber',
-            'wpclm_max_login_attempts' => 6,
-            'wpclm_lockout_duration' => 10,
             'wpclm_button_background_color' => '#2271B1',
             'wpclm_button_text_color' => '#FFFFFF',
             'wpclm_link_color' => '#2271B1',

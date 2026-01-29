@@ -41,11 +41,8 @@ class WPCLM_Auth {
         // Handle email confirmation
         add_action('init', array($this, 'handle_email_confirmation'));
     
-        // Track failed login attempts
-        add_filter('authenticate', array($this, 'check_login_attempts'), 30, 3);
-    
-        // Clear failed login attempts on successful login
-        add_action('wp_login', array($this, 'clear_login_attempts'));
+        // Note: Rate limiting is now handled exclusively by WPCLM_Rate_Limiter class.
+        // The legacy methods below are deprecated and kept only for backwards compatibility.
     
     }
 
@@ -143,12 +140,13 @@ public function validate_confirmation_token($encoded_token) {
         return false;
     }
     
-    // Check if token is expired (24 hours)
+    // Check if token is expired (default: 2 hours, filterable)
+    $expiry_time = apply_filters('wpclm_confirmation_token_expiry', 2 * HOUR_IN_SECONDS);
     $time_elapsed = time() - $token_data['timestamp'];
-    if ($time_elapsed > DAY_IN_SECONDS) {
+    if ($time_elapsed > $expiry_time) {
         $this->debug_log('Token validation failed: Token expired', array(
             'time_elapsed' => $time_elapsed,
-            'max_age' => DAY_IN_SECONDS
+            'max_age' => $expiry_time
         ));
         return false;
     }
@@ -184,9 +182,26 @@ public function handle_email_confirmation() {
         exit;
     }
     
-    // Get registration data using validated token
-    $transient_key = 'wpclm_registration_' . $token_data['token'];
+    $token_key = $token_data['token'];
+    $lock_key = 'wpclm_lock_' . $token_key;
+    $transient_key = 'wpclm_registration_' . $token_key;
+    
+    // Acquire lock to prevent race condition (5-minute TTL)
+    if (get_transient($lock_key)) {
+        $this->debug_log('Confirmation already in progress (locked)');
+        wp_safe_redirect(add_query_arg(array(
+            'action' => 'register',
+            'error' => urlencode(__('Your confirmation is being processed. Please wait a moment.', 'wp-custom-login-manager'))
+        ), $login_url));
+        exit;
+    }
+    set_transient($lock_key, true, 5 * MINUTE_IN_SECONDS);
+    
+    // Atomic: get and delete transient immediately to prevent replay
     $registration_data = get_transient($transient_key);
+    if ($registration_data) {
+        delete_transient($transient_key); // Invalidate immediately
+    }
     
     $this->debug_log('Retrieved registration data from transient', array(
         'transient_key' => $transient_key,
@@ -194,7 +209,21 @@ public function handle_email_confirmation() {
     ));
 
     if (!$registration_data) {
+        delete_transient($lock_key);
         $this->debug_log('Registration data not found or expired');
+        wp_safe_redirect(add_query_arg(array(
+            'action' => 'register',
+            'error' => urlencode($this->messages->get_message('confirmation_expired'))
+        ), $login_url));
+        exit;
+    }
+    
+    // Validate transient data structure
+    if (!is_array($registration_data) || 
+        empty($registration_data['email']) || 
+        !is_email($registration_data['email'])) {
+        delete_transient($lock_key);
+        $this->debug_log('Invalid or corrupted registration data in transient');
         wp_safe_redirect(add_query_arg(array(
             'action' => 'register',
             'error' => urlencode($this->messages->get_message('confirmation_expired'))
@@ -250,6 +279,10 @@ public function handle_email_confirmation() {
     // Clean up the transient
     delete_transient($transient_key);
     $this->debug_log('Deleted registration transient after successful user creation');
+
+    // Clean up the lock transient
+    delete_transient($lock_key);
+    $this->debug_log('Deleted lock transient after successful user creation');
 
     // Generate password reset key for the new user
     $user = get_user_by('ID', $user_id);

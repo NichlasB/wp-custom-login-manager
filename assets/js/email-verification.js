@@ -3,7 +3,7 @@
 
     const clearMessages = () => {
         const messages = document.querySelectorAll('.wpclm-email-validation');
-        messages.forEach(msg => msg.innerHTML = '');
+        messages.forEach(msg => msg.textContent = '');
     };
 
     let emailTimeout = null;
@@ -23,8 +23,11 @@
             if (!isEmailValid) {
                 e.preventDefault();
                 validationUI.className = 'wpclm-email-validation error';
-                validationUI.innerHTML = '<span class="dashicons dashicons-no"></span> ' + 
-                                    'Please wait for email verification to complete';
+                validationUI.textContent = '';
+                const iconNo = document.createElement('span');
+                iconNo.className = 'dashicons dashicons-no';
+                validationUI.appendChild(iconNo);
+                validationUI.appendChild(document.createTextNode(' ' + wpclm_vars.verification_pending));
             }
         });
     }
@@ -81,7 +84,7 @@
         // Clear validation if email is empty
         if (!email) {
             validationUI.className = 'wpclm-email-validation';
-            validationUI.innerHTML = '';
+            validationUI.textContent = '';
             isEmailValid = false;
             submitButton.disabled = true;
             return;
@@ -91,7 +94,7 @@
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
             validationUI.className = 'wpclm-email-validation error';
-            validationUI.innerHTML = wpclm_vars.invalid_format;
+            validationUI.textContent = wpclm_vars.invalid_format;
             isEmailValid = false;
             submitButton.disabled = true;
             return;
@@ -101,8 +104,11 @@
         emailTimeout = setTimeout(function() {
             // Show loading message
             validationUI.className = 'wpclm-email-validation loading';
-            validationUI.innerHTML = '<span class="wpclm-email-spinner"></span>' + 
-                                   wpclm_vars.verifying_long;
+            validationUI.textContent = '';
+            const spinner = document.createElement('span');
+            spinner.className = 'wpclm-email-spinner';
+            validationUI.appendChild(spinner);
+            validationUI.appendChild(document.createTextNode(wpclm_vars.verifying_long));
 
             $.ajax({
                 url: wpclm_vars.ajax_url,
@@ -114,16 +120,21 @@
                 },
                 success: function(response) {
                     clearMessages();
+                    validationUI.textContent = '';
                     if (response.success) {
                         validationUI.className = 'wpclm-email-validation success';
-                        validationUI.innerHTML = '<span class="dashicons dashicons-yes"></span> ' + 
-                                               response.data.message;
+                        const iconYes = document.createElement('span');
+                        iconYes.className = 'dashicons dashicons-yes';
+                        validationUI.appendChild(iconYes);
+                        validationUI.appendChild(document.createTextNode(' ' + response.data.message));
                         isEmailValid = true;
                         submitButton.disabled = false;
                     } else {
                         validationUI.className = 'wpclm-email-validation error';
-                        validationUI.innerHTML = '<span class="dashicons dashicons-no"></span> ' + 
-                                               response.data.message;
+                        const iconNo = document.createElement('span');
+                        iconNo.className = 'dashicons dashicons-no';
+                        validationUI.appendChild(iconNo);
+                        validationUI.appendChild(document.createTextNode(' ' + response.data.message));
                         isEmailValid = false;
                         submitButton.disabled = true;
                     }
@@ -131,7 +142,7 @@
                 error: function() {
                     clearMessages();
                     validationUI.className = 'wpclm-email-validation error';
-                    validationUI.innerHTML = wpclm_vars.error_occurred;
+                    validationUI.textContent = wpclm_vars.error_occurred;
                     isEmailValid = false;
                     submitButton.disabled = true;
                 }

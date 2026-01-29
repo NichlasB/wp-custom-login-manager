@@ -17,6 +17,20 @@ class WPCLM_Emails {
     private static $instance = null;
 
     /**
+     * Track if HTML content type is enabled for the next email
+     *
+     * @var bool
+     */
+    private $html_mail_active = false;
+
+    /**
+     * Suppress password change email for plugin-managed flows
+     *
+     * @var bool
+     */
+    private $suppress_password_change_email = false;
+
+    /**
      * Get singleton instance
      */
     public static function get_instance() {
@@ -30,88 +44,113 @@ class WPCLM_Emails {
     * Constructor
     */
     private function __construct() {
-    // Customize WordPress's default new user email
+        // Customize WordPress's default new user email
         add_filter('wp_new_user_notification_email', array($this, 'customize_new_user_email'), 10, 3);
 
-    // Set email content type to HTML
-        add_filter('wp_mail_content_type', array($this, 'set_html_content_type'));
-
-    // Override password reset email
+        // Override password reset email
         add_filter('retrieve_password_message', array($this, 'custom_reset_password_notification_email'), 10, 4);
-        add_filter('retrieve_password_title', function($title) {
-            return sprintf(__('[%s] Password Reset Request', 'wp-custom-login-manager'), 
-                wp_specialchars_decode(get_option('blogname'), ENT_QUOTES));
-        });
+        add_filter('retrieve_password_title', array($this, 'filter_retrieve_password_title'), 10, 1);
 
-    // Remove default password change notification
-        add_filter('send_password_change_email', '__return_false');
+        // Conditionally suppress password change notification
+        add_filter('send_password_change_email', array($this, 'filter_send_password_change_email'), 10, 2);
     }
 
-/**
- * Customize the WordPress new user notification email
- */
-public function customize_new_user_email($wp_new_user_notification_email, $user, $blogname) {
-    $template = get_option('wpclm_confirmation_email_template');
-    if (empty($template)) {
-        $template = $this->get_default_confirmation_email();
+    /**
+     * Set whether to suppress password change emails
+     *
+     * @param bool $enabled Enable suppression
+     */
+    public function set_password_change_suppression($enabled) {
+        $this->suppress_password_change_email = (bool) $enabled;
     }
 
-    $auth = WPCLM_Auth::get_instance();
-$token = $auth->generate_confirmation_token();
+    /**
+     * Conditionally suppress password change notification email
+     *
+     * @param bool    $send Whether to send email
+     * @param WP_User $user User object
+     * @return bool
+     */
+    public function filter_send_password_change_email($send, $user) {
+        if ($this->suppress_password_change_email) {
+            return false;
+        }
 
-if (defined('WP_DEBUG') && WP_DEBUG === true) {
-    error_log("[WPCLM Email Debug] Generated token for user: {$user->user_email}");
-}
-
-// Store registration data in transient
-$registration_data = array(
-    'email' => $user->user_email,
-    'first_name' => $user->first_name,
-    'last_name' => $user->last_name
-);
-
-// Decode token to get the internal token for transient key
-$token_data = json_decode(base64_decode($token), true);
-if (!$token_data || !isset($token_data['token'])) {
-    if (defined('WP_DEBUG') && WP_DEBUG === true) {
-        error_log("[WPCLM Email Debug] Failed to decode token for transient");
+        return $send;
     }
-    return $wp_new_user_notification_email;
-}
 
-$transient_key = 'wpclm_registration_' . $token_data['token'];
-set_transient($transient_key, $registration_data, DAY_IN_SECONDS);
+    /**
+     * Customize password reset title
+     *
+     * @param string $title Email title
+     * @return string
+     */
+    public function filter_retrieve_password_title($title) {
+        return sprintf(
+            __('[%s] Password Reset Request', 'wp-custom-login-manager'),
+            wp_specialchars_decode(get_option('blogname', ''), ENT_QUOTES)
+        );
+    }
 
-if (defined('WP_DEBUG') && WP_DEBUG === true) {
-    error_log("[WPCLM Email Debug] Stored registration data in transient: $transient_key");
-}
+    /**
+     * Customize WordPress's default new user email
+     *
+     * @param array   $wp_new_user_notification_email Email data
+     * @param WP_User $user                          User object
+     * @param string  $blogname                      Site name
+     * @return array
+     */
+    public function customize_new_user_email($wp_new_user_notification_email, $user, $blogname) {
+        $template = get_option('wpclm_confirmation_email_template');
+        if (empty($template)) {
+            $template = $this->get_default_confirmation_email();
+        }
 
-$login_url = home_url(get_option('wpclm_login_url', '/account-login/'));
-$confirmation_link = add_query_arg(array(
-    'action' => 'confirm',
-    'key' => $token
-), $login_url);
+        $auth = WPCLM_Auth::get_instance();
+        $token = $auth->generate_confirmation_token();
 
-    $replacements = array(
-        '{site_name}' => $blogname,
-        '{first_name}' => $user->first_name ?: $user->user_login,
-        '{confirmation_link}' => sprintf(
-            '<a href="%s" style="display: inline-block; padding: 12px 24px; background-color: #0073aa; color: #ffffff; text-decoration: none; border-radius: 4px;">%s</a>',
-            esc_url($confirmation_link),
-            __('Confirm Email Address', 'wp-custom-login-manager')
-        )
-    );
+        $registration_data = array(
+            'email' => $user->user_email,
+            'first_name' => $user->first_name,
+            'last_name' => $user->last_name
+        );
 
-    $message = str_replace(array_keys($replacements), array_values($replacements), $template);
-    $message = wpautop($message);
-    $message = $this->get_email_template($message);
+        $token_data = json_decode(base64_decode($token), true);
+        if (!$token_data || !isset($token_data['token'])) {
+            return $wp_new_user_notification_email;
+        }
 
-    $wp_new_user_notification_email['subject'] = sprintf(__('[%s] Confirm your registration', 'wp-custom-login-manager'), $blogname);
-    $wp_new_user_notification_email['headers'] = array('Content-Type: text/html; charset=UTF-8');
-    $wp_new_user_notification_email['message'] = $message;
+        $transient_key = 'wpclm_registration_' . $token_data['token'];
+        set_transient($transient_key, $registration_data, DAY_IN_SECONDS);
 
-    return $wp_new_user_notification_email;
-}
+        $login_url = home_url(get_option('wpclm_login_url', '/account-login/'));
+        $confirmation_link = add_query_arg(array(
+            'action' => 'confirm',
+            'key' => $token
+        ), $login_url);
+
+        $replacements = array(
+            '{site_name}' => $blogname,
+            '{first_name}' => $user->first_name ?: $user->user_login,
+            '{confirmation_link}' => sprintf(
+                '<a href="%s" style="display: inline-block; padding: 12px 24px; background-color: #0073aa; color: #ffffff; text-decoration: none; border-radius: 4px;">%s</a>',
+                esc_url($confirmation_link),
+                __('Confirm Email Address', 'wp-custom-login-manager')
+            ),
+            '{confirmation_link_raw}' => esc_url($confirmation_link),
+            '{confirmation_link_plain}' => esc_url($confirmation_link)
+        );
+
+        $message = str_replace(array_keys($replacements), array_values($replacements), $template);
+        $message = wpautop($message);
+        $message = $this->get_email_template($message);
+
+        $wp_new_user_notification_email['subject'] = sprintf(__('[%s] Confirm your registration', 'wp-custom-login-manager'), $blogname);
+        $wp_new_user_notification_email['headers'] = array('Content-Type: text/html; charset=UTF-8');
+        $wp_new_user_notification_email['message'] = $message;
+
+        return $wp_new_user_notification_email;
+    }
 
     /**
     * Customize password reset notification email
@@ -125,22 +164,22 @@ $confirmation_link = add_query_arg(array(
     
         $reset_link = network_site_url("wp-login.php?action=rp&key=$key&login=" . rawurlencode($user_login), 'login');
 
-    $replacements = array(
-        '{site_name}' => wp_specialchars_decode(get_option('blogname'), ENT_QUOTES),
-        '{first_name}' => $user_data->first_name ?: __('there', 'wp-custom-login-manager'),
-        '{reset_link}' => sprintf(
-            '<a href="%s" style="display: inline-block; padding: 12px 24px; background-color: #0073aa; color: #ffffff; text-decoration: none; border-radius: 4px;">%s</a>',
-            esc_url($reset_link),
-            __('Reset Password', 'wp-custom-login-manager')
-        )
-    );
+        $replacements = array(
+            '{site_name}' => wp_specialchars_decode(get_option('blogname'), ENT_QUOTES),
+            '{first_name}' => $user_data->first_name ?: __('there', 'wp-custom-login-manager'),
+            '{reset_link}' => sprintf(
+                '<a href="%s" style="display: inline-block; padding: 12px 24px; background-color: #0073aa; color: #ffffff; text-decoration: none; border-radius: 4px;">%s</a>',
+                esc_url($reset_link),
+                __('Reset Password', 'wp-custom-login-manager')
+            )
+        );
 
-    $message = str_replace(array_keys($replacements), array_values($replacements), $template);
-    $message = wpautop($message); // Format the message with proper paragraphs
-    $message = $this->get_email_template($message); // Wrap in HTML template
+        $message = str_replace(array_keys($replacements), array_values($replacements), $template);
+        $message = wpautop($message); // Format the message with proper paragraphs
+        $message = $this->get_email_template($message); // Wrap in HTML template
 
-    return $message;
-}
+        return $message;
+    }
 
     /**
     * Send reset password email
@@ -187,9 +226,31 @@ $confirmation_link = add_query_arg(array(
     }
 
     /**
+     * Get default template content from file
+     *
+     * @param string $template_name Template slug
+     * @return string
+     */
+    private function get_default_template($template_name) {
+        $template_path = WPCLM_PLUGIN_DIR . 'templates/' . $template_name . '.html';
+        if (!is_readable($template_path)) {
+            return '';
+        }
+
+        $contents = file_get_contents($template_path);
+        if (false === $contents) {
+            return '';
+        }
+
+        return $contents;
+    }
+
+    /**
     * Get default confirmation email template
     */
     private function get_default_confirmation_email() {
+        $heading_color = get_option('wpclm_heading_color', '#1D2327');
+
         return __(
             '<!DOCTYPE html>
             <html>

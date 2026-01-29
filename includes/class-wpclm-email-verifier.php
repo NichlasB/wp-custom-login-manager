@@ -12,14 +12,14 @@ if (!defined('ABSPATH')) {
 
 class WPCLM_Email_Verifier {
     /**
-     * Cache group name
+     * Transient prefix for email verification cache
      */
-    private $cache_group = 'wpclm_email_verification';
+    private $transient_prefix = 'wpclm_ev_';
 
     /**
      * Cache expiration in seconds (1 hour)
      */
-    private $cache_expiration = 3600;
+    private $cache_expiration = HOUR_IN_SECONDS;
 
     /**
      * Singleton instance
@@ -79,8 +79,9 @@ class WPCLM_Email_Verifier {
             'mode' => get_option('wpclm_reoon_verification_mode', 'quick')
         ));
 
-        // Check cache first
-        $cached_result = wp_cache_get(md5($email), $this->cache_group);
+        // Check transient cache first (persistent across requests)
+        $cache_key = $this->transient_prefix . md5($email);
+        $cached_result = get_transient($cache_key);
         if (false !== $cached_result) {
             $this->log_debug('Using cached result', array(
                 'email' => $email,
@@ -123,7 +124,15 @@ class WPCLM_Email_Verifier {
             $this->log_debug('API request failed', array(
                 'error' => $response->get_error_message()
             ));
-            return new WP_Error('api_error', __('Email verification service error. Please try again later.', 'wp-custom-login-manager'));
+            
+            // Check fallback behavior (default: allow registration on API failure)
+            $fallback = get_option('wpclm_email_verification_fallback', 'allow');
+            if ($fallback === 'allow') {
+                $this->log_debug('Allowing registration due to API failure (fallback enabled)');
+                return true;
+            }
+            
+            return new WP_Error('api_error', __('Email verification service temporarily unavailable. Please try again later.', 'wp-custom-login-manager'));
         }
 
         $status_code = wp_remote_retrieve_response_code($response);
@@ -131,6 +140,14 @@ class WPCLM_Email_Verifier {
             $this->log_debug('Unexpected API status code', array(
                 'status_code' => $status_code
             ));
+            
+            // Check fallback behavior on non-200 status
+            $fallback = get_option('wpclm_email_verification_fallback', 'allow');
+            if ($fallback === 'allow') {
+                $this->log_debug('Allowing registration due to API error status (fallback enabled)');
+                return true;
+            }
+            
             return new WP_Error('api_error', __('Email verification service error. Please try again later.', 'wp-custom-login-manager'));
         }
 
@@ -164,8 +181,8 @@ class WPCLM_Email_Verifier {
                         $result->overall_score >= 80; // Minimum acceptable score
         }
 
-        // Cache the result
-        wp_cache_set(md5($email), $is_valid ? 'valid' : 'invalid', $this->cache_group, $this->cache_expiration);
+        // Cache the result persistently using transients
+        set_transient($cache_key, $is_valid ? 'valid' : 'invalid', $this->cache_expiration);
 
         if (!$is_valid) {
             $error_message = $this->get_error_message($result);

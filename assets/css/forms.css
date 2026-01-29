@@ -203,7 +203,8 @@ body.wpclm-template-page .wpclm-background {
 .form-field input[type="text"]:focus,
 .form-field input[type="email"]:focus,
 .form-field input[type="password"]:focus {
-    outline: none;
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     background-color: #ffffff;
@@ -242,6 +243,14 @@ body.wpclm-template-page .wpclm-background {
     color: #2d3748;
 }
 
+/* Focus state for toggle button */
+.password-toggle:focus {
+    outline: 2px solid #0073aa;
+    outline-offset: 2px;
+    border-radius: 3px;
+    background-color: rgba(0, 115, 170, 0.1);
+}
+
 /* Icon styling within toggle button */
 .password-toggle .dashicons {
     width: 20px;
@@ -266,6 +275,13 @@ body.wpclm-template-page .wpclm-background {
 
 .remember-me input[type="checkbox"] {
     margin-right: 0.5rem;
+}
+
+/* Checkbox focus states */
+.remember-me input[type="checkbox"]:focus,
+.terms-privacy input[type="checkbox"]:focus {
+    outline: 2px solid #0073aa;
+    outline-offset: 2px;
 }
 
 /* Button Styles */

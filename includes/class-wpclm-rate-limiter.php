@@ -63,41 +63,87 @@ class WPCLM_Rate_Limiter {
         );
     }
 
+    /**
+     * Record an attempt with hybrid storage (transient + option fallback)
+     * M3 Fix: Persists rate limit data even if object cache is flushed
+     */
     public function record_attempt($ip_address) {
-        $attempts = $this->get_attempts($ip_address);
-        $attempts++;
+        $attempts_key = $this->build_transient_key('attempts', $ip_address);
+        $ttl = (int) get_option($this->options_prefix . 'monitoring_period', 3600);
         
-        set_transient(
-            $this->options_prefix . 'attempts_' . $ip_address,
-            $attempts,
-            get_option($this->options_prefix . 'monitoring_period')
-        );
+        // Get current data using hybrid retrieval
+        $data = $this->get_rate_data($attempts_key, $ttl);
+        $data['attempts'] = ($data['attempts'] ?? 0) + 1;
+        $data['first_attempt'] = $data['first_attempt'] ?? time();
+        
+        // Store in both transient AND option for persistence
+        set_transient($attempts_key, $data, $ttl);
+        update_option($attempts_key, $data, false); // autoload=false
 
-        if ($attempts >= get_option($this->options_prefix . 'max_attempts')) {
+        if ($data['attempts'] >= get_option($this->options_prefix . 'max_attempts')) {
             $this->set_lockout($ip_address);
         }
     }
 
+    /**
+     * Get attempts with hybrid retrieval (transient + option fallback)
+     * M3 Fix: Falls back to option if transient is missing (cache flush)
+     */
     private function get_attempts($ip_address) {
-        return (int) get_transient($this->options_prefix . 'attempts_' . $ip_address) ?: 0;
+        $attempts_key = $this->build_transient_key('attempts', $ip_address);
+        $ttl = (int) get_option($this->options_prefix . 'monitoring_period', 3600);
+        $data = $this->get_rate_data($attempts_key, $ttl);
+        return (int) ($data['attempts'] ?? 0);
+    }
+    
+    /**
+     * Get rate limit data with transient + option fallback
+     */
+    private function get_rate_data($key, $ttl) {
+        // Try transient first (faster)
+        $data = get_transient($key);
+        if ($data !== false && is_array($data)) {
+            return $data;
+        }
+        
+        // Fallback to option
+        $data = get_option($key, array());
+        if (!empty($data) && is_array($data)) {
+            // Check if expired
+            if (isset($data['first_attempt']) && (time() - $data['first_attempt']) > $ttl) {
+                delete_option($key);
+                return array();
+            }
+            // Restore transient from option
+            set_transient($key, $data, $ttl);
+            return $data;
+        }
+        
+        return array();
     }
 
     private function set_lockout($ip_address) {
         $lockout_duration = get_option($this->options_prefix . 'lockout_duration');
         set_transient(
-            $this->options_prefix . 'lockout_' . $ip_address,
+            $this->build_transient_key('lockout', $ip_address),
             time() + $lockout_duration,
             $lockout_duration
         );
     }
 
     private function get_lockout_time($ip_address) {
-        return (int) get_transient($this->options_prefix . 'lockout_' . $ip_address) ?: 0;
+        return (int) get_transient($this->build_transient_key('lockout', $ip_address)) ?: 0;
     }
 
     private function reset_attempts($ip_address) {
-        delete_transient($this->options_prefix . 'attempts_' . $ip_address);
-        delete_transient($this->options_prefix . 'lockout_' . $ip_address);
+        $attempts_key = $this->build_transient_key('attempts', $ip_address);
+        delete_transient($attempts_key);
+        delete_option($attempts_key); // M3 Fix: Also clean up option fallback
+        delete_transient($this->build_transient_key('lockout', $ip_address));
+    }
+
+    private function build_transient_key($type, $ip_address) {
+        return $this->options_prefix . $type . '_' . md5($ip_address);
     }
 
     public function get_client_ip() {

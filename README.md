@@ -37,13 +37,15 @@ A modern, secure custom login and registration system for WordPress with email v
 4. Set up email templates
 5. Configure redirect rules
 
+For detailed information on all available settings, see [docs/SETTINGS.md](docs/SETTINGS.md).
+
 ### Available Filters
 
-The plugin provides various filters to customize forms, emails, and redirects. See our documentation for a complete list of available filters.
+The plugin provides various filters to customize forms, emails, and redirects. See [docs/HOOKS.md](docs/HOOKS.md) for a complete list of available filters.
 
 ### Available Actions
 
-Multiple action hooks are available for form customization and user verification events. Refer to our documentation for detailed usage.
+Multiple action hooks are available for form customization and user verification events. See [docs/HOOKS.md](docs/HOOKS.md) for detailed usage.
 
 ## Template Customization
 
@@ -98,80 +100,8 @@ This project is licensed under the GPL v2 or later - see the LICENSE file for de
 
 ## Changelog
 
-### 1.2.0 - 2025-03-07
+See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
+
+### Latest Release: 1.2.0 - 2025-03-07
 * Fixed: Turnstile widget now properly appears on login form when enabled in settings
 * Added: Improved debugging for Turnstile integration to help troubleshoot visibility issues
-
-### 1.1.9 - 2025-02-23
-* Improved checkout redirect functionality for WooCommerce
-* Added special styling for checkout redirect messages
-* Enhanced login page UI for checkout redirects
-* Added JavaScript handling for checkout redirect scenarios
-* Fixed duplicate settings links in plugin actions
-* Resolved version number inconsistencies
-* Improved error handling for redirect scenarios
-
-### 1.1.8
-- Documentation: Updated plugin description for clarity
-
-### 1.1.7
-* Removed unnecessary whitespace in main plugin file
-* Improved code readability
-
-### 1.1.6
-* Fixed and optimized GitHub-based update system
-* Improved update reliability with better URL handling
-
-### 1.1.5
-* Replaced plugin update checker with custom GitHub updater implementation
-* Removed Composer dependencies for a lighter plugin footprint
-* Improved update process reliability
-
-### 1.1.4
-- Added option to disable the "If you need help creating an account, contact us" message in error messages
-- The contact help message is now disabled by default on new installations
-
-### 1.1.3
-* Fixed role-based email detection to handle both API status and flag
-* Fixed role-based email validation to properly respect allow setting
-* Enhanced role-based email examples in settings description
-
-### 1.1.2
-* Added option to allow role-based email addresses during registration
-* Added configurable contact URL in security settings for error messages
-* Enhanced contact link in error messages to use configured URL instead of hardcoded path
-* Added proper URL escaping for contact links
-
-### 1.1.1
-- Fixed: Password reset form now properly displays error messages when security verification fails
-- Fixed: Improved error message handling using WordPress transients for more reliable message display
-- Fixed: Cleaned up debug code and optimized error message styling
-
-### 1.1.0
-- Implemented rate limiting system to prevent brute force attacks
-- Added IP-based monitoring of login attempts
-- Introduced configurable security settings for attempt limits and lockouts
-- Enhanced error handling with clear user feedback
-- Added robust IP detection supporting proxy configurations
-- Integrated Cloudflare Turnstile for advanced bot protection
-- Added Reoon Email Verification API for real-time email validation
-- Added new configuration options for security features
-
-### 1.0.3
-- Fix: Removed duplicate Settings link from plugins page
-
-### 1.0.2
-- Fixed Composer autoloader conflict when multiple plugins use the same update checker
-
-### 1.0.1
-- Updated README.md
-
-### 1.0.0
-- Initial release
-- Modern login/registration system
-- Email verification
-- Security features
-- WooCommerce integration
-- Mobile-first responsive design
-- Custom CSS editor
-- Comprehensive settings panel

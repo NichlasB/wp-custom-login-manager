@@ -157,11 +157,6 @@ class WPCLM_WooCommerce {
             // Add the redirect_to parameter to the login URL
             $login_url = add_query_arg('redirect_to', urlencode($current_url), $login_url);
             
-            // Add debug logging
-            error_log('WooCommerce Order Pay Redirect:');
-            error_log('Current URL: ' . $current_url);
-            error_log('Login URL: ' . $login_url);
-            
             wp_safe_redirect($login_url);
             exit;
         }

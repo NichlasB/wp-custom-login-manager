@@ -3,23 +3,20 @@ jQuery(document).ready(function($) {
 
     // Global callback for Cloudflare Turnstile
     window.onTurnstileCallback = function(token) {
-        console.log('Turnstile token received:', token.substring(0, 10) + '...');
-        
         // Create a hidden field for the token if it doesn't exist
         const $form = $('.cf-turnstile').closest('form');
         if ($form.find('input[name="cf-turnstile-response"]').length === 0) {
             $form.append('<input type="hidden" name="cf-turnstile-response" value="' + token + '">');
-            console.log('Created hidden input field for Turnstile token');
         } else {
             // Update existing hidden field
             $form.find('input[name="cf-turnstile-response"]').val(token);
-            console.log('Updated existing hidden input field with Turnstile token');
         }
         
         // Enable submit buttons
         $form.find('.wpclm-button').prop('disabled', false).removeClass('wpclm-button-disabled');
-        $('.turnstile-loading').fadeOut();
+        $('.wpclm-turnstile-loading').fadeOut();
     };
+
 
     const WPCLM = {
         // Track Turnstile initialization status
@@ -28,11 +25,12 @@ jQuery(document).ready(function($) {
         init: function() {
             this.bindEvents();
             this.initPasswordStrengthMeter();
-            this.initKeyboardNavigation();
+            this.initPasswordToggle();
             this.initTurnstile();
             this.initCheckoutRedirect();
         },
-        
+
+
         // Initialize checkout redirect functionality
         initCheckoutRedirect: function() {
             // Check if we have a checkout redirect message
@@ -50,16 +48,16 @@ jQuery(document).ready(function($) {
             // Check if token exists
             const token = $('input[name="cf-turnstile-response"]').val();
             if (token && token.length > 0) {
-                console.log('Turnstile token found, enabling submit button');
                 WPCLM.turnstileReady = true;
                 $submitBtn.prop('disabled', false);
                 $submitBtn.removeClass('wpclm-button-disabled');
-                $('.turnstile-loading').fadeOut();
+                $('.wpclm-turnstile-loading').fadeOut();
                 return true;
             }
             return false;
         },
-        
+
+
         /**
          * Initialize Turnstile widget
          * 
@@ -79,19 +77,13 @@ jQuery(document).ready(function($) {
             if ($('.cf-turnstile').length > 0) {
                 // Skip if we're on the login form
                 if ($('#wpclm-login-form').length > 0) {
-                    console.log('Login form detected - skipping Turnstile initialization');
                     // Make sure the submit button is enabled
                     $('#wpclm-login-form').find('.wpclm-button').prop('disabled', false).removeClass('wpclm-button-disabled');
                     return;
                 }
                 
-                // Identify which form we're on
-                const isResetForm = $('#wpclm-lostpass-form, #wpclm-resetpass-form').length > 0;
-                const formType = isResetForm ? 'reset password' : 'registration';
-                console.log('Turnstile widget found on ' + formType + ' form');
-                
                 // Add loading message
-                $('.cf-turnstile').before('<p class="turnstile-loading">Security verification loading...</p>');
+                $('.cf-turnstile').before('<p class="wpclm-turnstile-loading">' + wpclm_forms.messages.security_verification_loading + '</p>');
                 
                 // Initially disable submit button until Turnstile is ready
                 const $form = $('.cf-turnstile').closest('form');
@@ -101,33 +93,23 @@ jQuery(document).ready(function($) {
                 // Create a hidden input field for the token if it doesn't exist
                 if ($form.find('input[name="cf-turnstile-response"]').length === 0) {
                     $form.append('<input type="hidden" name="cf-turnstile-response" value="">');
-                    console.log('Added hidden input field for Turnstile token');
                 }
                 
                 // Set up explicit callback for existing Turnstile widget
                 if (typeof turnstile !== 'undefined') {
-                    try {
-                        // We don't need to render a new widget, just make sure the callback is set
-                        // This prevents duplicate widgets
-                        window.turnstileOptions = {
-                            callback: 'onTurnstileCallback'
-                        };
-                        
-                        console.log('Turnstile callback configured');
-                    } catch (e) {
-                        console.error('Error configuring Turnstile:', e);
-                    }
+                    // We don't need to render a new widget, just make sure the callback is set
+                    // This prevents duplicate widgets
+                    window.turnstileOptions = {
+                        callback: 'onTurnstileCallback'
+                    };
                 }
                 
                 // Listen for the custom turnstile_ready event
                 $(document).on('turnstile_ready', function() {
-                    console.log('Turnstile is ready');
-                    
                     // Wait a short moment for token to be populated
                     setTimeout(function() {
                         if (!WPCLM.checkTokenAndEnableButton($submitBtn)) {
                             // If token still not found, start polling
-                            console.log('Token not found after ready event, starting polling');
                             const tokenCheckInterval = setInterval(function() {
                                 if (WPCLM.checkTokenAndEnableButton($submitBtn)) {
                                     clearInterval(tokenCheckInterval);
@@ -139,11 +121,10 @@ jQuery(document).ready(function($) {
                                 clearInterval(tokenCheckInterval);
                                 // Enable button anyway as fallback
                                 if (!WPCLM.turnstileReady) {
-                                    console.log('Enabling button as fallback after polling');
                                     WPCLM.turnstileReady = true;
                                     $submitBtn.prop('disabled', false);
                                     $submitBtn.removeClass('wpclm-button-disabled');
-                                    $('.turnstile-loading').fadeOut();
+                                    $('.wpclm-turnstile-loading').fadeOut();
                                 }
                             }, 5000);
                         }
@@ -153,26 +134,46 @@ jQuery(document).ready(function($) {
                 // Fallback in case the event doesn't fire
                 setTimeout(function() {
                     if (!WPCLM.turnstileReady) {
-                        console.log('Turnstile ready event never fired, using fallback');
                         // Enable button anyway
                         WPCLM.turnstileReady = true;
                         $submitBtn.prop('disabled', false);
                         $submitBtn.removeClass('wpclm-button-disabled');
-                        $('.turnstile-loading').fadeOut();
+                        $('.wpclm-turnstile-loading').fadeOut();
                     }
                 }, 5000); // 5 second fallback
             }
         },
+
+
+        /**
+         * Initialize password toggle functionality
+         */
+        initPasswordToggle: function() {
+            $('.password-toggle').on('click', function() {
+                const targetId = $(this).data('target');
+                const $input = $('#' + targetId);
+                const type = $input.attr('type') === 'password' ? 'text' : 'password';
+                $input.attr('type', type);
+                
+                // Toggle icon
+                $(this).find('.dashicons')
+                    .toggleClass('dashicons-visibility')
+                    .toggleClass('dashicons-hidden');
+                
+                // Update aria-label
+                const label = type === 'password' ? 
+                    wpclm_forms.messages.show_password || 'Show password' : 
+                    wpclm_forms.messages.hide_password || 'Hide password';
+                $(this).attr('aria-label', label);
+            });
+        },
+
 
         /**
          * Bind events to form elements
          */
         bindEvents: function() {
             $('.wpclm-form form').on('submit', this.handleFormSubmit);
-            $('input[type="password"]').on('input', function() {
-                WPCLM.checkPasswordStrength.call(this);
-            });
-            
             $('#pass1').on('input', function() {
                 WPCLM.validatePasswordRequirements($(this).val());
             });
@@ -183,7 +184,8 @@ jQuery(document).ready(function($) {
                 $(this).removeAttr('aria-invalid');
             });
         },
-        
+
+
         /**
          * Handle form submission
          * 
@@ -200,7 +202,6 @@ jQuery(document).ready(function($) {
         handleFormSubmit: function(e) {
             const $form = $(this);
             const $submitButton = $form.find('.wpclm-button');
-            console.log('Form submission started:', $form.attr('id'));
             
             // Clear previous errors
             $('.wpclm-error-message').remove();
@@ -208,7 +209,6 @@ jQuery(document).ready(function($) {
             // Skip all Turnstile processing for login form
             // This is intentional to prevent security verification errors on login
             if ($form.attr('id') === 'wpclm-login-form') {
-                console.log('Login form detected - skipping Turnstile verification');
                 // Basic validation only for login form
                 if (!WPCLM.validateForm($form)) {
                     e.preventDefault();
@@ -221,7 +221,6 @@ jQuery(document).ready(function($) {
             // For non-login forms, check if Turnstile is present
             if ($form.find('.cf-turnstile').length > 0) {
                 // Non-login form with Turnstile
-                console.log('Processing form submission with Turnstile:', $form.attr('id'));
                 
                 // Check for Turnstile token
                 let turnstileResponse = $form.find('input[name="cf-turnstile-response"]').val();
@@ -231,38 +230,30 @@ jQuery(document).ready(function($) {
                     try {
                         // Force a token refresh but don't re-render
                         turnstile.reset();
-                        
-                        console.log('Refreshed Turnstile widget, waiting for token...');
-                        
                         // Give a small delay to allow the token to be generated
                         setTimeout(function() {
                             // Check if we have a token now
                             turnstileResponse = $form.find('input[name="cf-turnstile-response"]').val();
                             if (turnstileResponse) {
-                                console.log('Successfully retrieved Turnstile token after reset');
                                 $form.submit();
                             }
                         }, 1000);
                     } catch (e) {
-                        console.error('Error refreshing Turnstile token:', e);
                     }
                 }
                 
                 // Final check for token
                 turnstileResponse = $form.find('input[name="cf-turnstile-response"]').val();
-                console.log('Final Turnstile token check in form:', $form.attr('id'), 'Token exists:', !!turnstileResponse);
                 if (!turnstileResponse) {
                     e.preventDefault();
                     // Try to reset the Turnstile widget if available
                     if (typeof turnstile !== 'undefined') {
                         try {
                             turnstile.reset();
-                            console.log('Turnstile widget reset due to missing token');
                         } catch (err) {
-                            console.error('Failed to reset Turnstile widget', err);
                         }
                     }
-                    WPCLM.showError($form.find('.cf-turnstile'), 'Please complete the security verification before submitting.');
+                    WPCLM.showError($form.find('.cf-turnstile'), wpclm_forms.messages.security_verification_required);
                     return false;
                 }
             }
@@ -270,6 +261,8 @@ jQuery(document).ready(function($) {
             // Validate form fields
             if (!WPCLM.validateForm($form)) {
                 e.preventDefault();
+                $submitButton.prop('disabled', false).removeAttr('aria-busy');
+                $form.removeClass('loading');
                 return false;
             }
             
@@ -297,7 +290,7 @@ jQuery(document).ready(function($) {
             $form.find('[required]').each(function() {
                 if (!$(this).val()) {
                     const fieldName = $(this).attr('name') || 'Field';
-                    WPCLM.showError($(this), messages.required_field || fieldName + ' is required');
+                    WPCLM.showError($(this), messages.required_field ? messages.required_field.replace('%s', fieldName) : messages.required);
                     $(this).attr('aria-invalid', 'true');
                     isValid = false;
                 }
@@ -306,7 +299,7 @@ jQuery(document).ready(function($) {
             // Check email format
             const $email = $form.find('input[type="email"]');
             if ($email.length && $email.val() && !WPCLM.isValidEmail($email.val())) {
-                WPCLM.showError($email, messages.invalid_email || 'Please enter a valid email address');
+                WPCLM.showError($email, messages.invalid_email || messages.email);
                 $email.attr('aria-invalid', 'true');
                 isValid = false;
             }
@@ -320,13 +313,13 @@ jQuery(document).ready(function($) {
                 // Check password requirements
                 if (!WPCLM.validatePasswordRequirements(password)) {
                     if (password.length < 12) {
-                        WPCLM.showError($pass1, messages.password_length || 'Password must be at least 12 characters long.');
+                        WPCLM.showError($pass1, messages.password_length);
                     } else if (!/[A-Z]/.test(password)) {
-                        WPCLM.showError($pass1, messages.password_uppercase || 'Password must include at least one uppercase letter.');
+                        WPCLM.showError($pass1, messages.password_uppercase);
                     } else if (!/[a-z]/.test(password)) {
-                        WPCLM.showError($pass1, messages.password_lowercase || 'Password must include at least one lowercase letter.');
+                        WPCLM.showError($pass1, messages.password_lowercase);
                     } else if (!/[0-9]/.test(password)) {
-                        WPCLM.showError($pass1, messages.password_number || 'Password must include at least one number.');
+                        WPCLM.showError($pass1, messages.password_number);
                     }
                     $pass1.attr('aria-invalid', 'true');
                     isValid = false;
@@ -344,7 +337,7 @@ jQuery(document).ready(function($) {
         },
 
         showError: function($element, message) {
-            const $error = $('<div class="wpclm-error-message" role="alert">' + message + '</div>');
+            const $error = $('<div class="wpclm-error-message" role="alert" aria-live="assertive">' + message + '</div>');
             $element.closest('.form-field').append($error);
         },
 
@@ -365,7 +358,7 @@ jQuery(document).ready(function($) {
                 
                 $meter.removeClass('very-weak weak medium strong')
                       .addClass(strength)
-                      .attr('aria-label', 'Password strength: ' + strength);
+                      .attr('aria-label', wpclm_forms.messages.password_strength_label + ' ' + strength);
             });
         },
 

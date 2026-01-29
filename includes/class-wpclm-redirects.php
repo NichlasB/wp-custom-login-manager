@@ -64,22 +64,26 @@ class WPCLM_Redirects {
                 ));
 
                 if (!empty($login_page)) {
-                    wp_redirect(home_url('/account-login/'));
+                    // L3/C2 Fix: Use dynamic login URL from settings
+                    $login_path = trim(get_option('wpclm_login_url', '/account-login/'), '/');
+                    wp_safe_redirect(home_url('/' . $login_path . '/'));
                     exit;
                 }
             }
         }
 
-            // Second check: Redirect logged-in users away from login page
-            if (is_user_logged_in()) {
-                // Check if current page is login page by URL and not a logout request
-                if ((strpos($_SERVER['REQUEST_URI'], 'login') !== false || 
-                     strpos($_SERVER['REQUEST_URI'], 'account-login') !== false) && 
-                    (!isset($_GET['action']) || $_GET['action'] !== 'logout')) {
+        // Second check: Redirect logged-in users away from login page
+        if (is_user_logged_in()) {
+            $login_path = trim(get_option('wpclm_login_url', '/account-login/'), '/');
+            $current_path = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
+            
+            // Check if current page is exactly the login page and not a logout request
+            if ($current_path === $login_path && 
+                (!isset($_GET['action']) || $_GET['action'] !== 'logout')) {
                 
                 // For admins, redirect to wp-admin
                 if (current_user_can('administrator')) {
-                    wp_redirect(admin_url());
+                    wp_safe_redirect(admin_url());
                     exit;
                 }
                 
@@ -94,7 +98,7 @@ class WPCLM_Redirects {
                     $redirect_url = home_url($redirect_url);
                 }
                 
-                wp_redirect($redirect_url);
+                wp_safe_redirect($redirect_url);
                 exit;
             }
         }

@@ -1,0 +1,12 @@
+<?php
+/**
+ * BACKUP of original class-wpclm-forms.php
+ * Created during refactoring on Phase 2 of file structure review
+ * Original file was 2273 lines - now split into:
+ * - class-wpclm-login-router.php
+ * - class-wpclm-frontend-assets.php
+ * - class-wpclm-access-control.php
+ * - class-wpclm-form-submission-handler.php
+ * - class-wpclm-login-page-renderer.php
+ * - class-wpclm-forms.php (facade)
+ */

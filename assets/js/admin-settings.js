@@ -128,6 +128,26 @@ jQuery(document).ready(function($) {
             $('.wpclm-debug-info-toggle').on('click', this.toggleDebugInfo);
         },
 
+        showNotice: function(message, type) {
+            const $wrap = $('.wrap').first();
+            if (!$wrap.length) {
+                return;
+            }
+
+            $wrap.find('.wpclm-admin-notice').remove();
+            const noticeClass = type === 'success' ? 'notice-success' : 'notice-error';
+            const $notice = $('<div>', {
+                class: 'notice ' + noticeClass + ' wpclm-admin-notice'
+            }).append($('<p>').text(message));
+            const $heading = $wrap.find('h1').first();
+
+            if ($heading.length) {
+                $heading.after($notice);
+            } else {
+                $wrap.prepend($notice);
+            }
+        },
+
         viewLog: function(e) {
             e.preventDefault();
             
@@ -145,11 +165,11 @@ jQuery(document).ready(function($) {
                     if (response.success) {
                         DebugManager.showLogViewer(response.data.log_contents);
                     } else {
-                        alert(response.data.message);
+                        DebugManager.showNotice(response.data && response.data.message ? response.data.message : wpclm_admin.error_message, 'error');
                     }
                 },
                 error: function() {
-                    alert(wpclm_admin.error_message);
+                    DebugManager.showNotice(wpclm_admin.error_message, 'error');
                 },
                 complete: function() {
                     $(e.target).prop('disabled', false).text(wpclm_admin.view_log_text);
@@ -179,13 +199,13 @@ jQuery(document).ready(function($) {
                         if ($('#wpclm-log-viewer').length) {
                             $('#wpclm-log-viewer .log-contents').empty();
                         }
-                        alert(wpclm_admin.log_cleared_message);
+                        DebugManager.showNotice(wpclm_admin.log_cleared_message, 'success');
                     } else {
-                        alert(response.data.message);
+                        DebugManager.showNotice(response.data && response.data.message ? response.data.message : wpclm_admin.error_message, 'error');
                     }
                 },
                 error: function() {
-                    alert(wpclm_admin.error_message);
+                    DebugManager.showNotice(wpclm_admin.error_message, 'error');
                 },
                 complete: function() {
                     $(e.target).prop('disabled', false).text(wpclm_admin.clear_log_text);

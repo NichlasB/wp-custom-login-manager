@@ -52,20 +52,14 @@ class WPCLM_Turnstile {
      * @return bool True if enabled, false otherwise
      */
     public function is_enabled_for($form_type) {
-        // Always disable for login and reset forms regardless of settings
-        if ($form_type === 'login' || $form_type === 'reset') {
-            $this->log_debug('Turnstile disabled for ' . $form_type . ' form');
-            return false;
-        }
-        
-        // Check if Turnstile is globally enabled
+        // Check if Turnstile is globally enabled first
         if (!$this->is_enabled()) {
             return false;
         }
         
-        // Check if Turnstile is enabled for this form type
+        // Check if Turnstile is enabled for this specific form type via admin settings
         $enabled_forms = get_option('wpclm_turnstile_forms', array('register'));
-        $is_enabled = in_array($form_type, $enabled_forms);
+        $is_enabled = in_array($form_type, (array) $enabled_forms, true);
         
         $this->log_debug("Turnstile for {$form_type} form: " . ($is_enabled ? 'enabled' : 'disabled'));
         
@@ -76,24 +70,11 @@ class WPCLM_Turnstile {
      * Log debug information if debugging is enabled
      * 
      * @param string $message The debug message to log
+     * @param mixed $data Optional data to log
      */
-    private function log_debug($message) {
-        if (defined('WP_DEBUG') && WP_DEBUG === true) {
-            // Create logs directory if it doesn't exist
-            $upload_dir = wp_upload_dir();
-            $logs_dir = $upload_dir['basedir'] . '/wpclm-logs';
-            
-            if (!file_exists($logs_dir)) {
-                wp_mkdir_p($logs_dir);
-                // Create .htaccess to protect logs
-                file_put_contents($logs_dir . '/.htaccess', 'deny from all');
-            }
-            
-            $log_file = $logs_dir . '/turnstile-debug.log';
-            $timestamp = date('[Y-m-d H:i:s]');
-            $log_message = $timestamp . ' ' . $message . PHP_EOL;
-            
-            error_log($log_message, 3, $log_file);
+    private function log_debug($message, $data = null) {
+        if (class_exists('WPCLM_Debug')) {
+            WPCLM_Debug::log_message($message, $data, 'debug');
         }
     }
 
@@ -139,10 +120,11 @@ class WPCLM_Turnstile {
      * @return bool|WP_Error True if valid, WP_Error on failure
      */
     public function verify_token($token) {
-        // Log verification attempt for debugging
-        $this->log_debug('Turnstile verification attempt with token: ' . (empty($token) ? 'EMPTY' : substr($token, 0, 10) . '...'));
-        $this->log_debug('POST data: ' . print_r($_POST, true));
-        $this->log_debug('Form type detected: ' . (isset($_POST['wpclm_lostpass_nonce']) ? 'lost password' : (isset($_POST['wpclm_resetpass_nonce']) ? 'reset password' : 'unknown')));
+        $form_type = isset($_POST['wpclm_lostpass_nonce']) ? 'lost password' : (isset($_POST['wpclm_resetpass_nonce']) ? 'reset password' : 'unknown');
+        $this->log_debug('Turnstile verification attempt', array(
+            'token_preview' => empty($token) ? 'EMPTY' : substr($token, 0, 10) . '...',
+            'form_type' => $form_type
+        ));
         
         if (empty($token)) {
             $this->log_debug('Turnstile verification failed: Empty token');
@@ -166,6 +148,13 @@ class WPCLM_Turnstile {
         
         if (is_wp_error($response)) {
             $this->log_debug('Turnstile API error: ' . $response->get_error_message());
+            
+            // Allow graceful degradation via filter (default: strict - do not allow)
+            if (apply_filters('wpclm_turnstile_allow_on_api_failure', false)) {
+                $this->log_debug('Allowing submission due to Turnstile API failure (fallback enabled)');
+                return true;
+            }
+            
             return new WP_Error('api_error', __('Security verification failed. Please try again.', 'wp-custom-login-manager'));
         }
 

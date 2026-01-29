@@ -45,7 +45,7 @@ class WPCLM_Debug {
      * Constructor
      */
     private function __construct() {
-        $this->log_file = WP_CONTENT_DIR . '/wpclm-debug.log';
+        $this->log_file = $this->get_secure_log_path();
         $this->is_enabled = get_option('wpclm_enable_debugging', false);
 
         // Register AJAX handlers
@@ -242,12 +242,31 @@ class WPCLM_Debug {
         }
 
         if (filesize($this->log_file) > $this->max_file_size) {
-            $backup_file = $this->log_file . '.1';
+            // L2 Fix: Use same randomized naming for backup file
+            $backup_file = str_replace('.log', '.backup.log', $this->log_file);
             if (file_exists($backup_file)) {
                 unlink($backup_file);
             }
             rename($this->log_file, $backup_file);
         }
+    }
+
+    /**
+     * Get secure log file path with randomized filename
+     * M2 Fix: Prevents direct URL access to debug log
+     * 
+     * @return string Full path to log file
+     */
+    private function get_secure_log_path() {
+        $log_name = get_option('wpclm_debug_log_name');
+        
+        if (!$log_name) {
+            // Generate a randomized filename on first use
+            $log_name = 'wpclm-debug-' . wp_generate_password(12, false, false) . '.log';
+            update_option('wpclm_debug_log_name', $log_name, false);
+        }
+        
+        return WP_CONTENT_DIR . '/' . $log_name;
     }
 
     /**
