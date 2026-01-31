@@ -11,7 +11,9 @@
     const emailInput = document.querySelector('.wpclm-register-form input[name="user_email"]');
     const submitButton = document.querySelector('.wpclm-register-form .form-field.submit-button button');
     
-    if (!emailInput || !submitButton) return;
+    if (!emailInput || !submitButton) {
+        return;
+    }
 
     // Disable submit button by default
     submitButton.disabled = true;

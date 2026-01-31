@@ -78,6 +78,9 @@ class WP_Custom_Login_Manager {
         // Include required files
         $this->include_files();
 
+        // Initialize email verifier early to register AJAX hooks (before init)
+        WPCLM_Email_Verifier::get_instance();
+
         // Initialize components after init hook
         add_action('init', array($this, 'init_components'), 10);
 
@@ -144,6 +147,9 @@ class WP_Custom_Login_Manager {
         $this->auth = WPCLM_Auth::get_instance();
         $this->emails = WPCLM_Emails::get_instance();
         $this->debug = WPCLM_Debug::get_instance();
+        
+        // Initialize email verifier to register AJAX hooks
+        WPCLM_Email_Verifier::get_instance();
 
         // Initialize WooCommerce integration if WooCommerce is active
         if (class_exists('WooCommerce')) {

@@ -186,7 +186,17 @@ class WPCLM_Access_Control {
      * Check admin access
      */
     public function check_admin_access() {
-        if (!is_admin() || wp_doing_ajax()) {
+        // Skip AJAX requests - check multiple ways to be safe
+        if (wp_doing_ajax() || (defined('DOING_AJAX') && DOING_AJAX)) {
+            return;
+        }
+        
+        // Also check request URI for admin-ajax.php
+        if (isset($_SERVER['REQUEST_URI']) && strpos($_SERVER['REQUEST_URI'], 'admin-ajax.php') !== false) {
+            return;
+        }
+
+        if (!is_admin()) {
             return;
         }
 

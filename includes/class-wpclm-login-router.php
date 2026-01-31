@@ -108,6 +108,18 @@ class WPCLM_Login_Router {
     public function maybe_redirect_login_page() {
         global $pagenow;
 
+        // Never redirect AJAX requests (admin-ajax.php is used for nopriv endpoints)
+        if (wp_doing_ajax() || (defined('DOING_AJAX') && DOING_AJAX)) {
+            return;
+        }
+
+        if (isset($_SERVER['REQUEST_URI']) && strpos($_SERVER['REQUEST_URI'], 'admin-ajax.php') !== false) {
+            return;
+        }
+
+        $request_path = isset($_SERVER['REQUEST_URI']) ? parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) : '';
+        $is_admin_request = (!empty($request_path) && strpos($request_path, '/wp-admin') !== false);
+
         // Don't redirect certain WordPress login actions
         $allowed_actions = array(
             'logout',
@@ -130,7 +142,7 @@ class WPCLM_Login_Router {
 
         // Check if we're on the login page or trying to access admin
         if (($pagenow === 'wp-login.php' && !isset($_GET['action'])) || 
-            (!is_user_logged_in() && strpos($_SERVER['REQUEST_URI'], '/wp-admin') !== false)) {
+            (!is_user_logged_in() && $is_admin_request)) {
 
             // Get custom login URL
             $login_url = home_url(get_option('wpclm_login_url', '/account-login/'));
@@ -138,7 +150,7 @@ class WPCLM_Login_Router {
             // Add redirect_to parameter
             if (isset($_GET['redirect_to'])) {
                 $login_url = add_query_arg('redirect_to', $_GET['redirect_to'], $login_url);
-            } elseif (strpos($_SERVER['REQUEST_URI'], '/wp-admin') !== false) {
+            } elseif ($is_admin_request) {
                 $login_url = add_query_arg('redirect_to', admin_url(), $login_url);
             }
 

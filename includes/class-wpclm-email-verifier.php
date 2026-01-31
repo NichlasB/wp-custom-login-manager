@@ -235,6 +235,7 @@ class WPCLM_Email_Verifier {
                 __('Please use a permanent email address. Temporary or disposable email addresses are not allowed.', 'wp-custom-login-manager')
             );
         }
+        $is_role_based = ($result->status === 'role_account' || (isset($result->is_role_account) && $result->is_role_account));
         if (!get_option('wpclm_allow_role_emails', false) && $is_role_based) {
             return $this->format_error_message(
                 __('Please use a personal email address. Role-based email addresses (like info@, admin@, etc.) are not allowed.', 'wp-custom-login-manager')
@@ -287,21 +288,31 @@ class WPCLM_Email_Verifier {
     }
 
     public function ajax_verify_email() {
+        $this->log_debug('AJAX verify_email called', ['POST' => $_POST]);
+
         // Verify nonce
         if (!check_ajax_referer('wpclm_verify_email', 'nonce', false)) {
+            $this->log_debug('Nonce verification failed');
             wp_send_json_error(['message' => __('Invalid security token', 'wp-custom-login-manager')]);
+            return;
         }
 
         $email = isset($_POST['email']) ? sanitize_email($_POST['email']) : '';
+        $this->log_debug('Email to verify', ['email' => $email]);
+        
         if (empty($email)) {
+            $this->log_debug('Empty email provided');
             wp_send_json_error(['message' => __('Please enter an email address', 'wp-custom-login-manager')]);
+            return;
         }
 
         // Use power mode for thorough verification
         $result = $this->verify_email($email);
+        $this->log_debug('Verification result', ['is_error' => is_wp_error($result)]);
 
         if (is_wp_error($result)) {
             wp_send_json_error(['message' => $result->get_error_message()]);
+            return;
         }
 
         wp_send_json_success(['message' => __('Email verification successful!', 'wp-custom-login-manager')]);
