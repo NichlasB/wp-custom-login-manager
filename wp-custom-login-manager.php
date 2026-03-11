@@ -12,8 +12,7 @@
  * Text Domain: wp-custom-login-manager
  * Domain Path: /languages
  * 
- * GitHub Repository: NichlasB/wp-custom-login-manager
- * GitHub Branch: main
+ * GitHub Plugin URI: NichlasB/wp-custom-login-manager
  *
  * @package WPCustomLoginManager
  */

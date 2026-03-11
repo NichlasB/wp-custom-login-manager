@@ -1,0 +1,57 @@
+name: Build Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create plugin zip
+        run: |
+          PLUGIN_SLUG="wp-custom-login-manager"
+          VERSION="${{ github.event.release.tag_name }}"
+          
+          # Create build directory
+          mkdir -p build/${PLUGIN_SLUG}
+          
+          # Copy plugin files (exclude dev files)
+          rsync -av --exclude='.git' \
+                    --exclude='.github' \
+                    --exclude='node_modules' \
+                    --exclude='tests' \
+                    --exclude='scripts' \
+                    --exclude='.gitignore' \
+                    --exclude='.gitattributes' \
+                    --exclude='.phpcs.xml' \
+                    --exclude='.eslintrc.json' \
+                    --exclude='phpunit.xml' \
+                    --exclude='phpunit.xml.dist' \
+                    --exclude='composer.json' \
+                    --exclude='composer.lock' \
+                    --exclude='package.json' \
+                    --exclude='package-lock.json' \
+                    --exclude='*.map' \
+                    --exclude='RELEASE-*.md' \
+                    ./ build/${PLUGIN_SLUG}/
+          
+          # Create zip
+          cd build
+          zip -r ${PLUGIN_SLUG}-${VERSION}.zip ${PLUGIN_SLUG}
+          
+          echo "ZIP_FILE=${PLUGIN_SLUG}-${VERSION}.zip" >> $GITHUB_ENV
+
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v1
+        with:
+          files: build/${{ env.ZIP_FILE }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
