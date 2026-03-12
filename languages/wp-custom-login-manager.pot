@@ -1,4 +1,4 @@
-# Copyright (C) 2024 CueFox
+# Copyright (C) 2024 Alynt
 # This file is distributed under the GPL v2 or later.
 msgid ""
 msgstr ""
@@ -27,5 +27,5 @@ msgid "A modern, secure custom login and registration system for WordPress with 
 msgstr ""
 
 #. Author of the plugin
-msgid "CueFox"
+msgid "Alynt"
 msgstr ""
